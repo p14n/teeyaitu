@@ -1,0 +1,7 @@
+(ns teeyaitu.adx-test
+  (:use teeyaitu.adx
+        midje.sweet))
+
+(def day1 {:high 44.53M :low 43.96})
+
+(fact )
