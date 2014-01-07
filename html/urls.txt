@@ -1,0 +1,3 @@
+http://uk.finance.yahoo.com/q/cp?s=%5EFTMC
+http://ichart.finance.yahoo.com/table.csv?s=3IN.L&a=06&b=5&c=2012&d=06&e=5&f=2013&g=d&ignore=.csv
+http://uk.finance.yahoo.com/q/cp?s=%5EFTMC&c=1

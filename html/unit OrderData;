@@ -1,0 +1,1876 @@
+unit OrderData;
+{****************************************************************************
+	Copyright: © JHC LLP
+	Creation Date: 05/01/2010
+	Description: OrderData
+
+	Change History
+	--------------
+
+	Date				By	Job			Description
+	---------- 	--- ------	-----------
+// 000901 IRH Added PlaceonTSPorExchange
+// 001121 IRH Added SetTSPCancelled
+// 010206 IRH Added GetSymbol
+// 012510 MH  Added XCHARG stuff for J36702
+// 200202 NAB Fixed problem caused by unassigned result of function.
+// 090103 IRH Added fetchSetsDeal transaction to bulk order data and extra
+//        method to fetch using transaction.
+// 160404 IRH Added activePortfolioSale function which also checks quantity.  For fees.
+// 080305 FW  If being debugged then display order reference when incepting an order.
+// 310505 NMB Added option properties.
+// 081007 NMB 119898 Added BookFX property to indicate whether to book the FX trade with an external party
+// 300508 NAT 123487 Add Done for Day function
+// 110110 NAT 160418 Add AssignAllData functions
+// 171210 ES  173662 Corrected autORDEREC to be tORDERECover
+   251111 MH  189896 ORAPI splitup
+****************************************************************************}
+interface
+
+{
+
+This is a non-visual unit.  You must not put any references in it to visual components
+or to units such as dialogs.
+
+}
+
+uses
+  FCISTKHDR,
+  FCIORDER,
+  FCIORDER.Over,
+  FCIORDER.FetchBulkOrder,
+  classes, toapi, toapiover, f1, f1Over, baseConv, OrderValidation,
+  Transactions, SharedDefs, BASEAPI;
+
+type
+	tOrderPlaceType = (opCapture, opPlaceOnTSP, opPlaceOnExchange);
+	tOptionsOrderType = (clHold, clSale, clNone);
+
+	tOrderData = class(tObject)
+  private
+    isextreo: string;
+		isOwner: tComponent;
+    isasyncTSPOrder: boolean;  // Async TSP order (from DealServer)
+ 		isXCHRGREC: FCIORDER.Over.tXCHRGRECOver;
+    isautoReplaceOrder: boolean;
+    isBookFX: boolean;
+    isautoReplaceOrderNum: string;
+    isPortfolioSaleClient: string;  // 090402 JW
+    isPortfolioSaleAsset: string;   // 090402 JW
+		isPortfolioSaleDepot: string;  // 080404 IRH
+    isPortfolioSaleAmount: extended;
+    isPortfolioSaleUnkownDepot: boolean;  // 090402 JW
+    isCFURN: string;
+    isCFSEQ: string;
+    isCurrencies: TCurrencyList;  // 130405 JW
+
+    isOldConNotes: string;
+    isOldDealNotes: string;
+
+    FJustCaptured: boolean;
+
+    function getAuthNotes: string;
+    procedure setAuthNotes(val: string);
+
+    procedure SetautoReplaceOrder(const Value: boolean);
+    procedure SetautoReplaceOrderNum(const Value: string);
+    function isCalculateRemaining: integer;
+    function getMktPrincipalOrder: boolean;
+    function GetOptionsOrderType: tOptionsOrderType;
+    function fetchOptionsDetails(useConv: tASConversation; ContractRef:string): boolean;
+	  function TransferOptions(useConv: tASConversation):boolean;
+	  function UpdateOptionsOrder(useConv: tASConversation):boolean;
+    function getOptionsQuantity: integer;
+    //SETS Phase 2
+    function AddNewFillsToBGOrder(const useConv: tAsConversation;
+                                  const errorCheck: tOrderValidationResult;
+                                  const modeIsAdmin: Boolean;
+                                  const chgType: string;
+                                  const AlertToBG: boolean): Boolean;
+    function GetCliNotes: string;
+    function GetConNotes: string;
+    function GetDealNotes: string;
+    procedure SetCliNotes(const Value: string);
+    procedure SetConNotes(const Value: string);
+    procedure SetDealNotes(const Value: string);
+    function AveragePrice(inDealList: tDEALISTover; useConv: tASConversation; const useTransaction: boolean = true): string; overload;
+  protected
+		function writeAUTREC: boolean;
+		function getORDSTS: string;
+    procedure setORDSTS(newValue: string);
+    property MktPrincipalOrder: boolean read getMktPrincipalOrder;
+ 	public
+		isINCrest: string;        // obsolete in MVP
+    isResidual: string;       // obsolete in MVP
+ 		isXonly: boolean;         // obsolete in MVP
+
+		isTSPSymbol: string;      // International symbol like BOOT.L
+		isCreateAtCND: boolean;  	// If set order is incepted straight in at CND
+		ORDETAIL: tORDETAILover;
+		ORASSOC: tORASSOCOver;
+
+		DEALHDR: tDEALHDRover;
+		ORDEAL: tORDEALOver;
+		// Or
+		DEALIST: tDEALISTover;
+    DEALIST2: tDEALISTover;
+
+    // Options details
+    OPTVALDET: tOPTVALDETOver;
+    OPTVALHDR: tOPTVALHDROver;
+    OPTCONT: tOPTCONTOver;
+
+		HDR: tHDR;
+		STKHDR: tSTKHDR;
+    HEADER1: tHEADER1;
+		ITEMRQ: tITEMRQ;
+
+    // Authorization data
+    AUTRECPC: tAUTRECPCOver;
+    autORDEREC: tORDERECover;  // Copy of orderec which the AUTRESULT record relates to
+
+		function dealIsFilled: boolean;
+		function OrderIsDealt: boolean;
+		function AveragePrice(useConv: tASConversation; const useTransaction: boolean = true): string; overload;
+
+    procedure reset; Virtual;
+
+		function fetchXtraCharges(Sender: tObject; useConv: tASConversation): boolean; overload;
+		function fetchXtraCharges(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation): boolean; overload;
+	  procedure updateCharges(inITEMRQ: tITEMRQ; useConv: tASConversation);
+    procedure updateContractNotes (inITEMRQ: tITEMRQ; useConv: tASConversation);
+    procedure updateDealingNotes (inITEMRQ: tITEMRQ; useConv: tASConversation);
+    procedure setPrincipalAgencyFlag(inConv: tASConversation);
+		function AddCharge(inConv: tASConversation; inCode, inDesc: string;	inValue: double; inCurrency, inText: string): boolean;
+
+    function fetchSETSdeal(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation): boolean;  overload;
+    function fetchSETSdeal(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation; var outStatus: string): boolean; overload;
+		function fetchSETSdeal(Sender: tObject; orderRef:string; useConv: tASConversation): boolean; overload;
+    function FetchAllDeals(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation): Boolean;
+		function updateOrderAndDeal(useConv: tASConversation; errorCheck: tOrderValidationResult; modeIsAdmin: boolean;
+                                chgType: string; const AlertToBG: boolean = false; const overrideTSP: boolean = false; const overrideTSPCODE: string = ''): Boolean;
+
+    function GetJobberFromBIC(inConv: tASConversation; const inTSP, inBICode: string): string;
+    function Capture(const DealerCode: string; useConv: tASConversation; var outStatus: string): boolean;
+    function Cancel(const modeIsAdmin, modeIsExOnly: boolean; useConv: tASConversation; var outStatus: string; const Asynch: boolean): boolean;
+    function SignOff(const modeIsAdmin, modeIsExOnly: boolean; useConv: tASConversation; var outStatus: string; const Asynch: boolean): boolean;
+    function release(const modeIsAdmin, modeIsExOnly: boolean; useConv: tASConversation; var outStatus: string; const Asynch: boolean;
+   							     const inDontSignoff: boolean = false): boolean;
+    function Reject(const RejText: string; const modeIsAdmin, unCapture: boolean; useConv: tASConversation;
+    				        var outStatus: string; const ShowRejMsg: boolean = false;
+                    const AlertToDealer: boolean = false; emxUnCapture: Boolean = False): boolean;
+    function Uncapture(useConv: tASConversation; out outStatus: string): Boolean;
+    function PlaceOnTSPorExchange(const inPlaceType: tOrderPlaceType; useConv: tASConversation; var OutStatus: string): boolean;
+		function SetTSPCancelled(useConv: tASConversation; var OutStatus: string): boolean;
+    function GetSymbold(useCOnv: tASConversation; var OutStatus: string): boolean;
+ 		procedure assignData(source: tOrderData);
+    procedure assignAllData(source: tOrderData);
+    function ActivePortfolioSale(const inCLINO: string; const inASSET: string): boolean; overload; // 090402 JW
+    function ActivePortfolioSale(const inCLINO, inASSET, inDepot: string): boolean; overload;
+    function ActivePortfolioSale(const inCLINO, inASSET, inDepot: string;
+    															const inAmount: extended): boolean; overload;
+    function SumDealQuantities: Extended;
+    function ReadOrderRecordFormats(const useConv: tAsConversation): Boolean;
+    procedure UpdateExternalReference( useConv: tASConversation; ExtRef: string );
+    function DoneForDay(useConv: tASConversation): boolean;
+
+		constructor Create(inOwner: tComponent); virtual;
+		destructor Destroy; Override;
+
+    property OrderStatus: string read getORDSTS write setORDSTS;
+    property CreateAtCND: boolean read isCreateAtCND write isCreateAtCND;
+    property extreo: string read isextreo write isextreo;
+    property TSPSymbol: string read isTSPSymbol;
+    property asyncTSPOrder: boolean read isasyncTSPOrder write isasyncTSPOrder;
+    property bookFX: boolean read isbookFX write isbookFX;
+		property XCHRGREC: FCIORDER.Over.tXCHRGRECOver read isXCHRGREC write isXCHRGREC;
+    // NMB 051101 Add autoReplaceOrder to indicate the order has been automatically generated
+    property autoReplaceOrder: boolean read isautoReplaceOrder write SetautoReplaceOrder;
+		property autoReplaceOrderNum: string read isautoReplaceOrderNum write SetautoReplaceOrderNum;
+    // 090402 JW - Portfolio/Depot Sales
+    property PortfolioSaleClient: string read isPortfolioSaleClient write isPortfolioSaleClient;  // 090402 JW
+    property PortfolioSaleAsset: string read isPortfolioSaleAsset write isPortfolioSaleAsset;   // 090402 JW
+    property PortfolioSaleUnkownDepot: boolean read isPortfolioSaleUnkownDepot write isPortfolioSaleUnkownDepot; // 090402 JW
+    property PortfolioSaleDepot: string read isPortfolioSaleDepot write isPortfolioSaleDepot;
+    property PortfolioSaleAmount: extended read isPortfolioSaleAmount write isPortfolioSaleAmount;
+
+    property CFURN: string read isCFURN write isCFURN;
+    property CFSEQ: string read isCFSEQ write isCFSEQ;
+
+    property CalculateRemaining: integer read isCalculateRemaining;
+    property CurrencyList: TCurrencyList read isCurrencies write isCurrencies;  // 060405 JW
+    property OptionsOrderType: tOptionsOrderType read GetOptionsOrderType;
+    property OptionsQuantity: integer read GetOptionsQuantity;
+
+    property CliNotes: string read GetCliNotes write SetCliNotes;
+    property ConNotes: string read GetConNotes write SetConNotes;
+    property DealNotes: string read GetDealNotes write SetDealNotes;
+    property AuthNotes: string read getAuthNotes write setAuthNotes;
+
+    property JustCaptured: boolean read FJustCaptured write FJustCaptured default false;
+    property Owner: TComponent read isOwner;
+
+		function fetchClientNotes(Sender: tObject; useConv: tASConversation): boolean;
+    function fetchContractNotes(Sender: tObject; useConv: tASConversation): boolean;
+    function fetchDealingNotes(Sender: tObject; useConv: tASConversation): boolean;
+  end;
+
+	tBulkOrderData = class(tOrderData)
+  private
+		isTransaction: tFetchBulkOrder;
+  public
+		BULKPARTS: tBULKPARTover;
+		function fetchSETSdealTransaction(inOrderNumber: string; useConv: tASConversation): boolean;
+    procedure assignAllData(source: tBulkOrderData); overload;
+    function updateBulkOrderAndDeal(useConv: tASConversation; errorCheck: tOrderValidationResult;
+                                    modeIsAdmin: boolean; chgType: string; BulkSubSize: integer;
+                                    Aggregate: Boolean): Boolean;
+		constructor Create(inOwner: tComponent); override;
+		destructor Destroy; Override;
+  end;
+
+implementation
+
+uses
+  FCIOrder.GetAveragePrice,
+  Controls, SysUtils, ASRecs, GenUtils, AsLists, Model.OrderConsts,
+  SetExternalReferencesTransaction, DoneForDayTransaction;
+
+constructor tOrderData.Create(inOwner: tComponent);
+begin
+	isOwner := inOwner;
+  ORDETAIL := tORDETAILOver.Create(isOwner);
+	ORASSOC := tORASSOCover.Create(isOwner);
+	ORDEAL := tORDEALOver.Create(isOwner);
+	DEALHDR := tDEALHDRover.Create(isOwner);
+	DEALIST := tDEALISTover.Create(isOwner);
+  DEALIST2 := tDEALISTover.Create(isOwner);
+  OPTVALDET := tOPTVALDETOver.Create(isOwner);
+  OPTVALHDR := tOPTVALHDROver.Create(isOwner);
+  OPTCONT := tOPTCONTOver.create(isOwner);
+	ITEMRQ := tITEMRQ.Create(isOwner);
+	HDR := tHDR.Create(isOwner);
+	STKHDR := tSTKHDR.Create(isOwner);
+  HEADER1 := tHEADER1.Create(isOwner);
+  AUTRECPC := tAUTRECPCOver.create(isOwner);
+  autORDEREC := tORDERECover.Create(isOwner);
+  isXCHRGREC := FCIORDER.Over.tXCHRGRECOver.Create(isOwner);
+end;
+
+destructor tOrderData.Destroy;
+begin
+	ORDETAIL.Free;
+	ORASSOC.Free;
+	ORDEAL.Free;
+	DEALHDR.Free;
+	DEALIST.Free;
+  DEALIST2.free;
+	ITEMRQ.Free;
+	HDR.Free;
+  OPTVALDET.Free;
+  OPTVALHDR.Free;
+  OPTCONT.free;
+  STKHDR.Free;
+  HEADER1.Free;
+  AUTRECPC.Free;
+  autORDEREC.Free;
+  isXCHRGREC.free;
+end;
+
+procedure tBulkOrderData.assignAllData(source: tBulkOrderData);
+begin
+  inherited assignAllData(source as tOrderData);
+  BULKPARTS.CopyFrom(source.BULKPARTS);
+end;
+
+constructor tBulkOrderData.Create(inOwner: tComponent);
+begin
+	inherited Create(inOwner);
+	BULKPARTS := tBULKPARTOver.Create(isOwner);
+
+  // Create the transaction
+  isTransaction := tFetchBulkOrder.Create(inOwner);
+  isTransaction.ORDETAIL := Self.ORDETAIL;
+  isTransaction.ORASSOC := self.ORASSOC;
+  isTransaction.DEALHDR := self.DEALHDR;
+  isTransaction.ORDEAL := self.ORDEAL;
+  isTransaction.BULKPARTS := self.BULKPARTS;
+	isTransaction.DEALIST := self.DEALIST;
+end;
+
+destructor tBulkOrderData.destroy;
+begin
+	BULKPARTS.free;
+  inherited;
+end;
+
+function TBulkOrderData.fetchSETSdealTransaction(inOrderNumber: string; useConv: tASConversation): boolean;
+begin
+	isTransaction.setConversation(useConv);
+	result := isTransaction.Execute(inOrderNumber);
+end; {tBulkOrder.FetchSETSdeal}
+
+
+function TBulkOrderData.updateBulkOrderAndDeal(useConv: tASConversation; errorCheck: tOrderValidationResult;
+                                               modeIsAdmin: boolean; chgType: string; BulkSubSize: integer;
+                                               Aggregate: Boolean): Boolean;
+var
+	flags: string[12];
+  bulkCounter: integer;
+  //partsIGN: integer;
+begin
+	try
+		with ITEMRQ do begin
+			clear;
+			IRECTP.AsString := 'OUX';
+			// Contract Reference
+			IRF01.AsString := ORDETAIL.CONREF.AsString;
+			// Order lock control
+			IRF02.AsInteger := ORDETAIL.ORDLCK.AsInteger;
+			//IRF03 holds boolean flags:
+      Flags := '            ';
+			if errorCheck.Compliance then // errors are validation
+				flags[1] := '1' // 1 here means is invalid but override
+			else
+				flags[1] := '0';
+			// position 2: administrator mode?
+			flags[2] := AnsiChar(intToStr(integer(modeIsAdmin))[1]);
+			// position 3: is deal filled?
+			if dealIsFilled then
+				flags[3] := '1'
+			else
+				flags[3] := '0';
+			// position 4: bulk order status
+			flags[4] := 'Y';
+			// position 5: Execution only?
+      // FW 168999 use chgType to work this out.
+			//flags[5] := AnsiChar(intToStr(integer(isXOnly))[1]);
+      if( chgType = CHGTYPE_XONLY ) then
+        flags[5] := '1'
+      else
+        flags[5] := '0';
+      //Is this an aggregate order?
+      Flags[11] := AnsiChar(IntToStr(Integer(Aggregate))[1]); //31458
+
+      // NMB  051101 Is it automatically generated??
+      if autoReplaceOrder then
+        flags[12] := '1'
+      else
+        flags[12] := '0';
+
+			IRF03.AsString := string(flags);
+			// Old Status
+			IRF04.AsString := ORASSOC.ORDSTS.AsString;
+			// Error messages
+			IRF06.AsString := errorCheck.Errors;
+			IRF07.AsString := chgType;
+			// Number of Deals & Bulk Parts
+			IRF08.asInteger := DEALIST.ValidCount;
+      IRF09.AsInteger := BULKPARTS.count;
+      IRF10.AsInteger := BulkSubSize;
+		end;
+
+    // If order has dealer notes ERIK shouldn't capture it
+    if( ORASSOC.ORDSTS.AsString = '' ) and (DealNotes <> '') and (ORDETAIL.ORDNDL.AsString = '') then
+      ORDETAIL.ORDNDL.AsString := '***';
+
+		// Now update
+		// Write ORDETAIL regardless - AS/400 may by now have decided
+		// it cannot do the update and throw away this record.
+		ITEMRQ.DoWrite(useConv);
+		DEALHDR.DoWrite(useConv);
+		ORDETAIL.doWrite(useConv);
+		DEALIST.useFirst;
+		while not DEALIST.eof do
+    begin
+      if DEALIST.IsDealValid then
+			  DEALIST.dowrite(useConv);
+			DEALIST.UseNext;
+		end;
+	  // Now send bulk parts
+    bulkCounter := 0;
+    //partsIGN := 0;
+		with BULKPARTS do
+    begin
+   		while bulkCounter < BULKPARTS.Count do
+      begin
+        BULKPARTS.useRecord(bulkCounter);
+        // PM 260901 In OR1.OR03, doblkparts we will ignore the IGN records
+        // We need to send it though otherwise the conversation cannot be synchronized
+        // Increment partsIGN so that the user sees correct number sent.
+        //if PTSTAT.AsString = BLKLEG_IGN then INC(partsIGN);
+				if trim(PTSTAT.AsString) = '' then PTSTAT.AsString := BLKLEG_UPD;
+				if trim(PTSTAT.AsString) = BLKLEG_TMP then PTSTAT.AsString := BLKLEG_IGN;
+
+        INC(bulkCounter);
+        // Construct details if incepting
+        if( ORASSOC.ORDSTS.AsString = '' )then
+          ORDLCK.AsInteger := 0;
+        // Prepare the header
+        HDR.Clear;
+        HDR.TEXT1.AsString := CONREF.AsString;
+        HDR.TEXT2.AsString := PTSTAT.AsString;
+        HDR.DoWrite(useConv);
+        // Write it
+
+        doWrite(useConv);
+        // 250501 PM 31680 Synchrozize the bulk send
+       if BulkSubSize > 0 then
+       begin
+         if((((bulkCounter ) mod BulkSubSize )= 0) AND (bulkCounter < BULKPARTS.count)) then
+         begin
+           // fw - todo
+           //if assigned(onBulkPartSent) then
+           //  self.onBulkPartSent(bulkCounter - partsIGN);
+           HDR.doRead(useConv);
+         end;
+       end;
+	  	end;
+    end;
+    // FW - TODO
+    //if assigned(onBulkPartSent) then
+    //  self.onBulkPartSent(bulkCounter - partsIGN);
+    // Now fetch results
+		HDR.DoRead(useConv);
+		Result := ( HDR.Status.AsString = '' );
+
+    if ( HDR.Status.AsString = '' ) or ( HDR.Status.AsString = 'V' ) then
+    begin
+      // Put new Contract reference in CONREF
+      if (HDR.TEXT1.AsString <> '') then
+        ORDETAIL.CONREF.AsString := HDR.TEXT1.AsString;
+
+      // Now update the charges!
+      updateCharges(ITEMRQ, useConv);
+
+      // Now update the notes
+      updateContractNotes(ITEMRQ, useConv);
+      updateDealingNotes(ITEMRQ, useConv);
+    end;
+	except on ConversationException do
+    begin
+			useConv.recover;
+			result := updateBulkOrderAndDeal(useConv, errorCheck, modeIsAdmin, chgType, BulkSubSize, Aggregate);
+    end else
+      raise
+	end;
+end; {TOrder.UpdateOrderAndDeal}
+
+procedure tOrderData.reset;
+begin
+	isInCrest := '';
+  isResidual := '';
+	DEALHDR.Clear;
+	ORDEAL.Clear;
+	ORASSOC.Clear;
+	DEALIST.clearRecords;
+	DEALIST2.clearRecords;
+	ORDETAIL.Clear;
+  AUTRECPC.clear;
+  OPTVALDET.clearRecords;
+  OPTVALHDR.Clear;
+  OPTCONT.Clear;
+  isXCHRGREC.clearRecords;
+  isCreateAtCND := false;
+//  isFXDeal := false;
+  isTSPSymbol := '';
+  isPortfolioSaleClient := '';
+  isPortfolioSaleAsset := '';
+  isPortfolioSaleDepot := '';
+  isPortfolioSaleUnkownDepot := False;
+  isPortfolioSaleAmount := 0;
+end;
+
+function TOrderData.fetchSETSdeal(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation): boolean;
+// 990621 irh Routine Added
+// Moved here from tOrder to differentiate between representation on screen and in data.
+begin
+  isTSPSymbol := '';
+  DEALHDR.Clear;
+  DEALIST.clearRecords;
+  inITEMRQ.IRECTP.AsString := 'OO4'; // Was OO2
+  inITEMRQ.DoWrite(useConv);
+  Result := ReadOrderRecordFormats(useConv);
+end; {tOrder.FetchSetsDeal}
+
+function TOrderData.fetchXtraCharges(Sender: tObject; useConv: tASConversation): boolean;
+var
+  ITEMRQ: tITEMRQ;
+begin
+  // TODO - check if conversation requires locking here
+	result := false;
+  ITEMRQ := tITEMRQ.Create(nil);
+	try
+    ITEMRQ.IRF01.AsString := copy(ORDETAIL.CONREF.AsString, 1, 3);
+    ITEMRQ.IRF02.AsString := copy(ORDETAIL.CONREF.AsString, 4, 2);
+    ITEMRQ.IRF03.AsString := copy(ORDETAIL.CONREF.AsString, 6, 1);
+    ITEMRQ.IRF04.AsString := copy(ORDETAIL.CONREF.AsString, 7, 11);
+
+		try
+			result := fetchXtraCharges(Sender, ITEMRQ, useConv);
+		except
+			on ConversationException do
+      begin
+				useConv.recover;
+				result := fetchXtraCharges(Sender, useConv);
+      end else
+        raise;
+		end;
+  finally
+    FreeAndNil(ITEMRQ);
+	end;
+end;
+
+
+// Fetch the extra charges for this order
+function TOrderData.fetchXtraCharges(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation): boolean;
+begin
+	Result := True;
+	inITEMRQ.IRECTP.AsString := 'OC5';
+  inITEMRQ.DoWrite(useConv);
+
+	isXCHRGREC.clearRecords;
+
+	if (header1.DoRead(useConv)) then
+		while isXCHRGREC.Read_Next(useConv) do begin end;
+    
+	// Set the total charges from the header1 H1GEN1 field
+  ORDETAIL.CHRG1.AsFloat := header1.H1GEN1.asfloat;
+end;
+
+procedure tOrderData.updateCharges (inITEMRQ: tITEMRQ; useConv: tASConversation);
+begin
+  with inITEMRQ do
+	begin
+    clear;
+    IRECTP.AsString := 'OX1';
+    IRF01.AsString := copy(ORDETAIL.CONREF.AsString, 1, 3);
+		IRF02.AsString := copy(ORDETAIL.CONREF.AsString, 4, 2);
+		IRF03.AsString := copy(ORDETAIL.CONREF.AsString, 6, 1);
+		IRF04.AsString := copy(ORDETAIL.CONREF.AsString, 7, 11);
+    IRF05.asInteger := isXCHRGREC.count;
+    IRF06.AsString := ORDETAIL.OCCLIC.AsString;
+  end;
+
+  inITEMRQ.DoWrite(useConv);
+
+ 	isXCHRGREC.useFirst;
+  while not isXCHRGREC.eof do
+  begin
+		isXCHRGREC.dowrite(useConv);
+		isXCHRGREC.UseNext;
+  end;
+
+	header1.DoRead(useConv);
+
+	// Set the total charges from the header1 H1GEN1 field
+  ORDETAIL.CHRG1.AsFloat := header1.H1GEN1.asfloat;
+
+end;
+
+function TOrderData.updateOrderAndDeal(useConv: tASConversation; errorCheck: tOrderValidationResult;
+  modeIsAdmin: boolean; chgType: string; const AlertToBG: boolean = false; const overrideTSP: boolean = false; const overrideTSPCODE: string = ''): Boolean;
+var
+	flags: string[15];//defines a string of 15 AnsiChars.
+
+  procedure UpdateAuthorizationText;
+  var
+    trans: tSetNotesTransaction;
+  begin
+    trans := tSetNotesTransaction.create(nil);
+    try
+      trans.setConversation(useConv);
+      trans.Execute('ORD',
+                    'AU',
+                    copy(ORDETAIL.CONREF.AsString, 1, 5),
+                    copy(ORDETAIL.CONREF.AsString, 6, 6),
+                    format('%02.2d', [ORDETAIL.ORDLCK.AsInteger]),
+                    '', '', '',
+                    AuthNotes);
+    finally
+      trans.Free;
+    end;
+  end;
+
+begin
+  //is this a SETS Deal?  If so we need to add new fills to the BGOrder at the same time
+  if ORDETAIL.ISSETS.AsString = 'Y' then
+  begin
+    if not AddNewFillsToBGOrder(useConv, errorCheck, modeIsAdmin, chgType, AlertToBG) then
+    begin
+      Result := false;
+      Exit;
+    end;
+  end;
+  with ITEMRQ do begin
+    clear;
+    IRECTP.AsString := 'OUX';
+    // Contract Reference
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    // Order lock control
+    IRF02.AsInteger := ORDETAIL.ORDLCK.AsInteger;
+    //IRF03 holds boolean flags:
+    //gg 260901 change brought through from newfig4.4
+    //flags := '000000000';
+    flags := '000000000000000';  // Defaults all 15 characters
+    // position 1: compliance errors
+    if errorCheck.Compliance then // errors are validation
+      flags[1] := '1' // 1 here means is invalid but override
+    else
+      flags[1] := '0';
+    // position 2: administrator mode?
+    //		flags := flags + intToStr(integer(frmOrders.modeIsAdministrator));
+    flags[2] := AnsiChar(intToStr(integer(modeIsAdmin))[1]);
+    // position 3: is deal filled?
+    if self.dealIsFilled then
+      flags[3] := '1'
+    else
+      flags[3] := '0';
+    // position 4: it ISN'T a bulk deal
+    flags[4] := 'N';
+    // position 5: Execution only?
+    // FW 168999 use chgType to work this out.
+    //flags[5] := AnsiChar(intToStr(integer(isXOnly))[1]);
+    if( chgType = CHGTYPE_XONLY ) then
+      flags[5] := '1'
+    else
+      flags[5] := '0';
+    // irh 220899 Optional passing of AUTRECPC if it has values
+		// Flag 7 is *on if AUTRECPC is being sent
+    if writeAUTREC then
+    	flags[7] := '1'
+    else
+    	flags[7] := '0';
+		// 000323 Create order CND if necessary
+    if createAtCND then
+    	flags[8] := '1'
+    else
+    	flags[8] := '0';
+
+    if bookFX then
+     	flags[9] := '1'
+    else
+     	flags[9] := '0';
+
+    //gg 260901 change brought through from newfig4.4
+		// 010510 - Flag as being ASYNC order.
+    if asyncTSPOrder then
+    	flags[10] := '1'
+    else
+    	flags[10] := '0';
+
+    //Is it an aggregate
+    //Flags[11] := IntToStr(Integer(isAggregate))[1];  //31458
+
+    // NMB  051101 Is it automatically generated??
+    if autoReplaceOrder then
+      flags[12] := '1'
+    else
+      flags[12] := '0';
+
+    //GKN 120504 J75570 Set Mkt Principal Flag
+    if MktPrincipalOrder then
+      flags[14] := '1'
+    else
+      flags[14] := '0';
+
+		// Assign the flags
+    //IRF03.AsString := flags;
+    IRF03.AsString := string(flags);
+    // Old Status
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+
+    // R2C J84300, send alert to B/G
+    if AlertToBG then
+      IRF05.AsString := '1'
+    else
+      IRF05.AsString := '0';
+
+    // Error messages
+    IRF06.AsString := errorCheck.Errors;
+    IRF07.AsString := chgType;
+    // Number of Deals
+    IRF08.asInteger := DEALIST.ValidCount;
+    // Dealer Code
+// 19981113 Dealer now in ORDETAIL
+//			IRF09.AsString := dealer;
+
+    // Override TSP Code
+    if overrideTSP and (ORDETAIL.ISSETS.AsString = 'B') and (ORDETAIL.TSCODE.AsString <> overrideTSPCODE) then
+    begin
+      IRF11.AsString := '1' + overrideTSPCODE;
+    end;  // if
+  end;
+  // Now update
+  // Write ORDETAIL regardless - AS/400 may by now have decided
+  // it cannot do the update and throw away this record.      !!!!
+  ITEMRQ.DoWrite(useConv);
+
+//981004 irh Average price now lives in DEALHDR
+  DEALHDR.AVPRICEC.AsString := averagePrice(useConv, false);
+  DEALHDR.DoWrite(useConv);
+
+  // If order has dealer notes ERIK shouldn't capture it
+  if(ORASSOC.ORDSTS.AsString = '') and (DealNotes <> '') and (ORDETAIL.ORDNDL.AsString = '') then
+    ORDETAIL.ORDNDL.AsString := '***';
+
+  ORDETAIL.doWrite(useConv);
+	// Send AUTRECPC it it is filled in.
+	if writeAutrec then
+  begin
+  	AUTRECPC.doWrite(useConv);
+  end;
+
+  DEALIST.useFirst;
+
+  while not DEALIST.eof do begin
+    if DEALIST.IsDealValid then
+      DEALIST.dowrite(useConv);
+    DEALIST.UseNext;
+  end;
+
+  useConv.prepareToReceive;
+  // Now fetch results
+  HDR.DoRead(useConv);
+  Result := ( HDR.Status.AsString = '' );
+
+  // May be 'V' meaning it's OK!!!
+  if( HDR.Status.AsString = '' ) or ( HDR.Status.AsString = 'V' ) then
+  begin
+		// Put new Contract reference in CONREF
+		if (HDR.TEXT1.AsString <> '') then
+  	begin
+			ORDETAIL.CONREF.AsString := HDR.TEXT1.AsString;
+    end;
+    // Is it an options order?
+    if self.OptionsOrderType <> clNone then
+    begin
+      //Update the options details
+      if UpdateOptionsOrder(useConv) then
+      begin
+        result := true;
+        //... and if dealt, transfer the shares
+        if OrderIsDealt then
+          result := TransferOptions(useConv);
+      end
+      else
+      begin
+        result := false;
+      end;
+    end;
+
+    // Now update the charges!
+		updateCharges(ITEMRQ, useConv);
+
+    // Now update the notes
+    updateContractNotes (ITEMRQ, useConv);
+    updateDealingNotes (ITEMRQ, useConv);
+
+  	if writeAutrec then
+      UpdateAuthorizationText;
+  end
+end;
+
+//980513 Sim this is derived from SummariseDeals, which seeing as it's identical
+//in FrmDeal2 and FrmXOnly, could, in part, become a method of the order
+function TOrderData.AveragePrice(useConv:tASConversation;const useTransaction: boolean = true): string;
+var
+  tmpList: tDEALISTover;
+  i: Integer;
+  fromBk, toBk: tASBookmark;
+begin
+  tmpList := tDEALISTover.Create(nil);
+  try
+    if( DEALIST.count > 0 ) then
+    begin
+      for i := 0 to DEALIST.Count - 1 do
+      begin
+        fromBk := DEALIST.Bookmark(i);
+        if DEALIST.IsDealValid(fromBk) then
+        begin
+          toBk := tmpList.Add_Record;
+          tmpList.copyBookmarkFields(DEALIST, fromBk, toBk);
+        end;
+      end;
+    end;
+
+    Result := AveragePrice(tmpList, useConv, useTransaction);
+  finally
+    tmpList.Free;
+  end;
+end;
+
+function tOrderData.dealIsFilled: boolean;
+// Is the deal filled.
+// Now only count those deals that have not been deleted (MH - 04/07/01)
+var i: integer;
+		subTot, orderValue: system.currency;
+begin
+  // FX Orders are ALWAYS filled.
+  if ORDETAIL.ORDCLS.AsString = 'FX' then
+    result := true
+  else
+  begin
+    subTot := 0;
+    for i := 0 to dealist.count - 1 do
+      if (dealist.QUANTN.stringRead(dealist.bookmark(i)) <> '') and
+         (dealist.DLACTION.stringRead(dealist.bookmark(i)) <> 'D') and
+         (dealist.IsDealValid(dealist.bookmark(i))) then
+          subTot := subTot + strToFloat(dealist.QUANTN.stringRead(dealist.Bookmark(i)));
+    orderValue := ordetail.QUAN15.AsFloat;
+    result := (subTot = orderValue);
+  end;
+end; {dealIsFilled}
+
+function tOrderData.getORDSTS: string;
+begin
+	result := ORASSOC.ORDSTS.AsString
+end;
+
+procedure tOrderData.setORDSTS(newValue: string);
+begin
+	ORASSOC.ORDSTS.AsString := newValue;
+end;
+
+function tOrderData.writeAUTREC: boolean;
+// New irh 220899 Whether to write an AUTRECPC record when incepting
+begin
+	result := AUTRECPC.ATLEVEL.AsString <> '';
+end;
+
+function tOrderData.Capture(const DealerCode: string; useConv: tASConversation;
+          var outStatus: string): boolean;
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRECTP.AsString := 'OU2';
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.AsString := ORDETAIL.ORDLCK.AsString;
+    IRF05.AsString := DealerCode;
+    doWrite(useConv);
+  end;
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := HDR.STATUS.AsString = '';
+end;
+
+// 0010503 - MH Added for GSDealServer
+function tOrderData.SignOff(const modeIsAdmin, modeIsExOnly: boolean; useConv: tASConversation; var outStatus: string; const Asynch: boolean): boolean;
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.asInteger := ORDETAIL.ORDLCK.asInteger;
+    IRF03.AsString := IntToStr(Integer(modeIsAdmin));
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+    IRF05.AsString := IntToStr(Integer(modeIsExOnly));
+    IRECTP.AsString := 'OU6';
+    doWrite(useConv);
+  end;
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := outStatus = '';
+end;
+
+function tOrderData.release(const modeIsAdmin, modeIsExOnly: boolean;
+                            useConv: tASConversation;
+                            var outStatus: string; const Asynch: boolean;
+                            const inDontSignoff: boolean = false): boolean;
+//Set status of order to partially executed.
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.AsInteger := ORDETAIL.ORDLCK.asInteger;
+    IRF03.AsString := IntToStr(Integer(modeIsAdmin));
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+    IRF05.AsString := IntToStr(Integer(modeIsExOnly));
+    IRF07.AsString := IntToStr(Integer(inDontSignoff));
+    IRECTP.AsString := 'OU9';
+    DoWrite(useConv);
+  end;
+  HDR.DoRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := outStatus = '';
+end;
+
+function tOrderData.Cancel(const modeIsAdmin, modeIsExOnly: boolean;
+  useConv: tASConversation; var outStatus: string; const Asynch: boolean): boolean;
+// 000420 IRH Added Asynch Cancel
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.asInteger := ORDETAIL.ORDLCK.asInteger;
+    IRF03.AsString := IntToStr(Integer(modeIsAdmin));
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+    IRF05.AsString := IntToStr(Integer(modeIsExOnly));
+    if asynch then IRF06.AsString := '1';
+    // NMB 051101 Indicate that the order has been cancelled by auto replace.
+    if AutoReplaceOrder then
+    begin
+    	IRF07.AsString := '1';
+		// NMB This will only have been set as part of the CancelandReplace function.
+    	IRF08.AsString := autoReplaceOrderNum;
+    end;
+    IRECTP.AsString := 'OU4';
+    doWrite(useConv);
+  end;
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := outStatus = '';
+end;
+
+function tOrderData.Reject(const RejText: string; const modeIsAdmin, unCapture: boolean;
+                           useConv: tASConversation; var outStatus: string;
+                           const ShowRejMsg: boolean = false;
+                           const AlertToDealer: boolean = false;
+                           emxUnCapture: Boolean = False): boolean;
+var
+  REJREC: tREJREC;
+begin
+  REJREC := tREJREC.Create(nil);
+  try
+    with ITEMRQ do
+    begin
+      clear;
+      IRF01.AsString := ORDETAIL.CONREF.AsString;
+      //000530 NAB - Use as integer
+//      IRF02.AsString := ORDETAIL.ORDLCK.AsString;
+      IRF02.AsInteger := ORDETAIL.ORDLCK.AsInteger;
+      //\000530 NAB
+      IRF03.AsString := IntToStr(Integer(modeIsAdmin));
+      IRF04.AsString := ORASSOC.ORDSTS.AsString;
+      IRF05.AsString := IntToStr(Integer(unCapture));
+      if ShowRejMsg then
+				IRF06.AsString := '1' //Show rejection message to Business Getter.
+      else
+      	IRF06.AsString := '0';
+      // R2C 84300, send alert to dealer rather then B/G
+      if AlertToDealer then
+        IRF07.AsString := '1'
+      else
+        IRF07.AsString := '0';
+      IRF08.AsString := IntToStr(Integer(emxUnCapture));
+
+      IRECTP.AsString := 'OUR';
+      doWrite(useConv);
+    end; //with
+    with REJREC do begin
+      clear;
+      CONREF.AsString := ORDETAIL.CONREF.AsString;
+      REJALL.AsString := RejText;
+      doWrite(useConv);
+    end;
+    HDR.doRead(useConv);
+    outStatus := HDR.STATUS.AsString;
+    result := outStatus = '';
+  finally
+    REJREC.Free;
+  end;
+end;
+
+function tOrderData.SetTSPCancelled(useConv: tASConversation; var OutStatus: string): boolean;
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRECTP.AsString := 'OUC'; // Meaning asynch cancel
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.asInteger := ORDETAIL.ORDLCK.asInteger;
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+    doWrite(useConv);
+  end;
+
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := HDR.STATUS.AsString = '';
+  if result then
+  	ORASSOC.ORDSTS.AsString := HDR.TEXT1.AsString;
+end;
+
+function tOrderData.PlaceOnTSPorExchange(const inPlaceType: tOrderPlaceType; useConv: tASConversation; var OutStatus: string): boolean;
+// For captured orders only - moves between captured, captured on TSP and captured on Exchange.  Can move between
+// any of three
+var f5: string;
+begin
+	// Decide on the place parameter..
+  case inPlaceType of
+    opCapture: f5 := '*CAP';
+    opPlaceOnExchange: f5 := '*MKT';
+    opPlaceOnTSP: f5 := '*TSP';
+    end;
+
+  with ITEMRQ do
+  begin
+    clear;
+    IRECTP.AsString := 'OUP'; // Meaning place
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.asInteger := ORDETAIL.ORDLCK.asInteger;
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+		IRF05.AsString := f5;
+    IRF06.AsString := ORDETAIL.EXTREO.AsString;
+    // 051001 JW - If LimitType has been overriden then pass this to AS/400
+    if ORDETAIL.OVRLTP.AsString <> '' then
+      IRF07.AsString := ORDETAIL.OVRLTP.AsString;
+    //\051001 JW
+    //gg 020102 extra parameter for tsp code (used to derive signoff time
+    //when placing order at TSP)
+    IRF08.AsString := Self.ORDETAIL.TSCODE.AsString;
+    IRF09.AsString := self.isextreo; // From where?
+    doWrite(useConv);
+  end;
+
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := HDR.STATUS.AsString = '';
+  if result then
+  	ORASSOC.ORDSTS.AsString := HDR.TEXT1.AsString;
+end;
+
+function tOrderData.GetSymbold(useCOnv: tASConversation; var OutStatus: string): boolean;
+// Get symbol for current order.  Uses .VL02 routine
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRECTP.AsString := 'OV8'; // Meaning getSYmbol
+    IRF01.AsString := ORDETAIL.ASSET.AsString;
+    IRF02.AsString := ORDETAIL.TSCODE.AsString;
+    IRF03.AsString := ORDETAIL.MKJMKT.AsString;
+    IRF04.AsString := ORDETAIL.TSSMOD.AsString;
+    doWrite(useConv);
+  end;
+
+  STKHDR.doRead(useConv);
+
+  isTSPSymbol := STKHDR.TSSSYM.AsString;
+
+  outStatus := STKHDR.ERRSTS.AsString;
+  result := (outStatus = '');
+end; {tOrderDate.GetSymbol}
+
+
+function TOrderData.fetchSETSdeal(Sender: tObject; inITEMRQ: tITEMRQ; useConv: tASConversation;
+         var outStatus: string): boolean;
+// 990621 irh Routine Added
+// Moved here from tOrder to differentiate between representation on screen and in data.
+{Fetch details of deal from AS/400 and populate global data objects}
+begin
+  isTSPSymbol := '';
+  DEALHDR.Clear;
+  DEALIST.clearRecords;
+  inITEMRQ.IRECTP.AsString := 'OO4'; // Was OO2
+  inITEMRQ.DoWrite(useConv); //inITEMRQ is prepopulated.
+  Result := ReadOrderRecordFormats(useConv);
+  outStatus := HDR.STATUS.AsString;
+end; {tOrder.FetchOrder}
+
+function TOrderData.fetchSETSdeal(Sender: tObject; orderRef: string; useConv: tASconversation): boolean;
+var
+  itemrq: tITEMRQ;
+begin
+  itemrq := tItemrq.Create(nil);
+  try
+  	itemrq.IRF01.AsString := orderRef;
+    result := fetchSETSdeal(sender, itemrq, useConv);
+  finally
+      itemrq.free;
+  end;
+end;
+
+procedure tOrderData.assignAllData(source: tOrderData);
+begin
+  assignData(source);
+
+  OPTVALDET.copyFrom(source.OPTVALDET);
+  OPTVALHDR.copyFrom(source.OPTVALHDR);
+  OPTCONT.copyFrom(source.OPTCONT);
+  STKHDR.copyFrom(source.STKHDR);
+
+  AUTRECPC.CopyFrom(source.AUTRECPC);
+  AUTORDEREC.CopyFrom(source.AUTORDEREC);
+
+  //Cloning an exact copy - so include charges below.
+  XCHRGREC.CopyFrom(source.XCHRGREC);
+
+  CurrencyList := source.CurrencyList;
+
+  isBookFX := source.isBookFX;
+  isResidual := source.isResidual;
+
+  // And the active portfolio sale details
+  isPortfolioSaleClient := source.isPortfolioSaleClient;
+  isPortfolioSaleAsset := source.isPortfolioSaleAsset;
+  isPortfolioSaleDepot := source.isPortfolioSaleDepot;
+  isPortfolioSaleAmount := source.isPortfolioSaleAmount;
+  isPortfolioSaleUnkownDepot := source.isPortfolioSaleUnkownDepot;
+end;
+
+procedure tOrderData.assignData(source: tOrderData);
+// NMB 151001 Copy from source to here
+var i: integer;
+begin
+	ordetail.copyFields(source.ORDETAIL);
+  dealhdr.copyFields(source.DEALHDR);
+  orassoc.copyFields(source.orassoc);
+  hdr.copyFields(source.hdr);
+  itemrq.copyFields(source.itemrq);
+  ordeal.copyFields(source.ordeal);
+  dealist.clearRecords;
+  for i := 0 to source.dealist.count - 1 do
+  begin
+		dealist.Add_Record;
+    dealist.copyBookmarkFields(source.dealist, source.DEALIST.Bookmark(i), dealist.Buffer);
+  end;
+end;
+
+function tOrderData.AveragePrice(inDealList: tDEALISTover; useConv: tASConversation;
+  const useTransaction: boolean): string;
+var iTotal, nQuant, iSum, iProduct: extended;
+		i: integer;
+		bk: tASBookmark;
+		DPcount: integer;
+    curDiff: boolean;
+    GetAveragePrice: tGetAveragePrice;
+const
+	DP = 5;
+	maxLen = 13;
+
+  function getAveragePriceTransaction: string;
+  begin
+    // Create tTransaction
+    GetAveragePrice := tGetAveragePrice.create(isOwner);
+    // ...
+    try
+
+      with GetAveragePrice do
+      begin
+        // Set Conversation for tTransaction
+        GetAveragePrice.setConversation(useConv);
+        GetAveragePrice.DEALIST := inDealList;
+        GetAveragePrice.ORDETAIL := self.ORDETAIL;
+        if Execute then
+        begin
+          Result := DEALHDR.AVPRICEN.AsString;
+        end;  // if
+      end;  // with
+
+    finally
+      // Free tTransaction
+      GetAveragePrice.Free;
+    end;  // try..finally
+  end;
+
+  function getInputCurrency(inMarkerCurrency: string): string;
+  begin
+    if assigned(isCurrencies) then
+      Result := isCurrencies.GetInputCurrency(inMarkerCurrency)
+    else
+      Result := inMarkerCurrency;
+  end;
+
+begin
+	try
+    curDiff := false;
+		itotal := 0;
+		isum := 0;
+		// Iterate through all and sum
+		if inDealList.count = 1 then
+      if getInputCurrency(ORDETAIL.OCSETC.AsString) <> inDealList.MKTCURN.AsString then
+        if useTransaction then
+          result := getAveragePriceTransaction
+        else
+          result := '-1'
+      else
+			result := inDealList.PRICHN.stringRead(inDealList.bookmark(0))
+    else
+		begin
+      with inDealList do
+      begin // >1 record
+        for i := 0 to count - 1 do
+        begin
+          bk := Bookmark(i);
+          nQuant := fractStrToFloat(QUANTN.stringRead(bk));
+          iTotal := iTotal + nQuant;
+          iProduct := nQuant * fractStrToFloat(PRICHN.stringRead(bk));
+          iSum := iSum + iProduct;
+          if getInputCurrency(ORDETAIL.OCSETC.AsString) <> MKTCURN.stringRead(bk) then
+            curDiff := true;
+        end;
+      end;
+      if iTotal = 0 then
+        result := '0'
+      else
+      begin
+        if curDiff then
+        begin
+          if useTransaction then
+            result := getAveragePriceTransaction
+          else
+            result := '-1'
+        end else
+        begin
+          //maximum of 5 decimal places (to deal with recurring values), but if
+          // the string is too long, take the DPs down
+          DPcount := DP;
+          result := floatToStrF(iSum/iTotal, ffFixed, 18, DPcount);
+          while (length(result) > maxlen) and (DPcount > 0) do begin
+            dec(DPcount);
+            result := floatToStrF(iSum/iTotal, ffFixed, 18, DPcount);
+          end;
+        end;
+      end;
+    end;
+	except
+		result := '0'
+	end;
+end;
+
+procedure tOrderData.SetautoReplaceOrder(const Value: boolean);
+begin
+  isautoReplaceOrder := Value;
+end;
+
+procedure tOrderData.SetautoReplaceOrderNum(const Value: string);
+begin
+  isautoReplaceOrderNum := Value;
+end;
+
+function tOrderData.AddCharge(inConv: tASConversation; inCode, inDesc: string;
+					inValue: double; inCurrency, inText: string): boolean;
+var
+	TriangulateRate: tTriangulateRate;
+  XRate: double;
+begin
+	//initialise
+  Result := false;
+
+	//should always be assigned, but better to check
+	if assigned(isXCHRGREC) then
+  begin
+  	//first get exchange rate from charge currency to client settlement currency
+    TriangulateRate := tTriangulateRate.Create(nil);
+    try
+    	TriangulateRate.setConversation(inConv);
+    	TriangulateRate.Execute(self.ORDETAIL.BUYSEL.AsString,
+      												self.ORDETAIL.CLINO.AsString,
+                              Self.ORDETAIL.OCCLIC.AsString,
+                              inCurrency);
+    	if (TriangulateRate.HDR.TEXT1.asinteger <> 0 ) then
+      begin
+      	//got exchange rate so set values and proceed.
+      	XRate := TriangulateRate.HDR.TEXT1.asinteger / 10000000;
+
+        with isXCHRGREC do
+        begin
+          add_record;
+          //set result
+          Result := true;
+          //commission code
+          XCCOD.AsString := inCode;
+          //charge description
+          XCDES.AsString := inDesc;
+          if trim(inText) <> '' then
+          	XCDES.AsString := XCDES.AsString + ', ' + inText;
+          //charge currency
+          XCCUR.AsString := inCurrency;
+					//value in charge currency
+          XCVCC.AsString := floattostr(inValue);
+          //value in client settlement currency
+          XCVCS.AsString := floattostr(inValue * (1 / XRate));
+          //exchange rate charge client???
+          XCXRC.AsString := floattostr (1 / XRate);
+          //Restate protect
+          XCSAF.AsString := 'Y';
+        end;
+      end;
+    finally
+			TriangulateRate.free;
+    end;
+  end;
+end;
+
+function tOrderData.GetCliNotes: string;
+begin
+  Result := ORDETAIL.CLINOTES.AsString;
+end;
+
+procedure tOrderData.SetCliNotes(const Value: string);
+begin
+  ORDETAIL.CLINOTES.AsString := Value;
+end;
+
+procedure tOrderData.SetConNotes(const Value: string);
+begin
+  ORDETAIL.CONNOTES.AsString := Value;
+end;
+
+function tOrderData.GetConNotes: string;
+begin
+  Result := ORDETAIL.CONNOTES.AsString;
+end;
+
+procedure tOrderData.SetDealNotes(const Value: string);
+begin
+  ORDETAIL.DELNOTES.AsString := Value;
+end;
+
+function tOrderData.GetDealNotes: string;
+begin
+  Result := ORDETAIL.DELNOTES.AsString;
+end;
+
+function tOrderData.GetJobberFromBIC(inConv: tASConversation; const inTSP, inBICode: string): string;
+var
+	Jobber: tGetInternalJobber;
+begin
+  // Even if we throw an excpetion, return what we passed in
+  Result := inBICode;
+
+  Jobber := tGetInternalJobber.Create(nil);
+  try
+   	Jobber.setConversation(inConv);
+   	Jobber.Execute(inTSP, inBICode);
+    result := jobber.HEADER1.H1CNAM.AsString;
+  finally
+    Jobber.free;
+  end;
+end;
+
+procedure tOrderData.setPrincipalAgencyFlag(inConv: tASConversation);
+var
+	JobberInformation:tGetJobberInformation;
+begin
+	JobberInformation := tGetJobberInformation.Create(nil);
+ 	try
+  	with JobberInformation do
+  	begin
+    	JobberInformation.setConversation(inConv);
+    	if Execute(DEALIST.JOBBRN.AsString) then
+				if JobberInformation.HDR.STATUS.AsString='P' then
+					dealhdr.principal.AsString:='P'
+      	else
+      		dealhdr.principal.AsString:='';
+  	end;  // with
+  finally
+  	JobberInformation.free;
+  end;
+end;
+
+function tOrderData.ActivePortfolioSale(const inCLINO: string; const inASSET: string): boolean;
+begin
+  Result := ((isPortfolioSaleClient <> '') and (isPortfolioSaleAsset <> '')) and
+            ((isPortfolioSaleClient = trim(stringBefore('-', inCLINO))) and
+             (isPortfolioSaleAsset = trim(stringBefore('-', inASSET))));
+end;
+
+function tOrderData.ActivePortfolioSale(const inCLINO, inASSET, inDepot: string;
+																				const inAmount: extended): boolean;
+begin
+	result := activePortfolioSale(inClino, inAsset, inDepot) and
+  (isPortfolioSaleAmount >= inAmount)
+end;
+
+function tOrderData.ActivePortfolioSale(const inCLINO, inASSET, inDepot: string): boolean;
+begin
+  Result := (	(isPortfolioSaleClient <> '') and
+  						(isPortfolioSaleAsset <> '') and
+  						(isPortfolioSaleDepot <> '') and
+            	(isPortfolioSaleClient = trim(stringBefore('-', inCLINO))) and
+             	(isPortfolioSaleAsset = trim(stringBefore('-', inASSET))) and
+             	(isPortfolioSaleDepot = inDepot));
+end;
+
+function tOrderData.FetchAllDeals(Sender: tObject; inITEMRQ: tITEMRQ;
+  useConv: tASConversation): Boolean;
+  //Returns parent and descendent deals.
+begin
+	result := false;
+  DEALIST2.clearRecords;
+  inITEMRQ.IRECTP.AsString := 'OAF';
+  inITEMRQ.DoWrite(useConv); //inITEMRQ is prepopulated.
+  if HEADER1.DoRead(useConv) then
+  begin
+    while DEALIST2.Read_Next(useConv) do;
+    Result := true; //It worked
+  end; //if
+end;
+
+function tOrderData.OrderIsDealt: boolean;
+begin
+	result := (DEALIST.Validcount > 0);
+end;
+
+{**
+ * Calculate the remaining ordval, based on the existing fills.
+ *}
+function tOrderData.isCalculateRemaining: integer;
+var
+  Quantity,
+  totalQuantity: integer;
+
+begin
+  Quantity := 0;
+  totalQuantity := 0;
+
+	//DEALIST contains all the orders is a bulk deal
+	with DEALIST do
+	begin
+		UseFirst;	//Go to the first order
+		while not EOF do	//iterate through all entries in deal
+		begin
+      if DEALIST.IsDealValid and ( DEALIST.DLSTAT.AsString <> DEALPRT_SGL ) and (DEALIST.DLSTAT.AsString <> DEALPRT_IGN ) then
+      begin
+        try
+          Quantity := StrToInt(QUANTN.AsString)
+        except
+          on EConvertError do
+            Quantity := 0;
+        end;
+        TotalQuantity := TotalQuantity +Quantity;  //Calculate total quantity for bulk deal
+      end;
+
+			UseNext;
+		end;
+	end;
+
+  result := StrToInt(ORDETAIL.ORDVAL.AsString) - TotalQuantity;
+end;
+
+{**
+ * Return the quantity of options on Order.
+ *}
+function tOrderData.getOptionsQuantity: integer;
+var
+  totalQuantity: integer;
+begin
+  totalQuantity := 0;
+
+	//OPTVALDET contains all the option details
+	with OPTVALDET do
+	begin
+		UseFirst;	//Go to the first order
+		while not EOF do	//iterate through all entries in deal
+		begin
+			TotalQuantity := TotalQuantity + EXEQTY.AsInteger;  //Calculate total quantity for bulk deal
+			UseNext;
+		end;
+	end;
+
+  result := TotalQuantity;
+end;
+
+function tOrderData.SumDealQuantities: Extended;
+var
+  Quantity: Extended;
+begin
+  Result := 0.0;
+  Quantity := 0.0;
+
+	with DEALIST do
+	begin
+		UseFirst;
+		while not EOF do
+		begin
+      if( DLACTION.AsString <> 'D' ) and isDealValid then
+      begin
+  			try
+	  			Quantity := StrToFloat( QUANTN.AsString );
+		  	except on EConvertError do
+          Quantity := 0.0;
+  			end;
+
+	  		Result := Result + Quantity;
+      end;
+			UseNext;
+		end;
+	end;
+end;
+
+function tOrderData.getMktPrincipalOrder: boolean;
+begin
+  Result := ORASSOC.PRINAG.AsString = 'M';
+end;
+
+{**
+ *    Returns whether the order is an options order
+ *}
+function tOrderData.GetOptionsOrderType: tOptionsOrderType;
+begin
+  if ORDETAIL.EXTREO.AsString = 'clHold' then
+    result := clHold
+  else if ORDETAIL.EXTREO.AsString = 'clSale' then
+    result := clSale
+  else
+    result := clNone;
+end;
+
+{**
+ *    Fetches options details
+ *}
+function tOrderData.fetchOptionsDetails(useConv: tASConversation; ContractRef:string): boolean;
+begin
+	result := false;
+  ITEMRQ.Clear;
+  HEADER1.clear;
+  OPTVALDET.clearRecords;
+  OPTCONT.clear;
+  // ...and read in the list of option values
+  ITEMRQ.IRECTP.AsString := 'OPF';
+  ITEMRQ.IRF01.AsString := '00005'; // number of retries
+  ITEMRQ.IRF02.AsString := '00001'; // delay
+  ITEMRQ.DoWrite(useConv);
+  OPTCONT.CONREF.AsString := ContractRef;
+  OPTCONT.LASTRECD.AsString := 'Y';
+  OPTCONT.DoWrite(useConv);
+  if HEADER1.DoRead(useConv) then
+  begin
+    if HEADER1.H1ERRO.AsString <> '0' then
+    begin
+      result := false;
+    end else
+    begin
+      OPTVALDET.read_List(useConv);
+      result := true;
+    end
+  end;
+end;
+
+{**
+ *    Transfer exercised options to correct depot
+ *}
+function tOrderData.TransferOptions(useConv: tASConversation): boolean;
+const
+  cUseClientDefaultDepot = 'NULL';
+begin
+	result := false;
+  ITEMRQ.Clear;
+  ITEMRQ.IRECTP.AsString := 'OPX';
+  ITEMRQ.IRF01.AsString := self.ORDETAIL.CONREF.AsString;
+  ITEMRQ.IRF02.AsString := cUseClientDefaultDepot;
+  ITEMRQ.DoWrite(useConv);
+  if HEADER1.DoRead(useConv) then
+    if HEADER1.H1ERRO.AsString = '0' then
+      result := true;
+end;
+
+{**
+ *    Update options details
+ *}
+function tOrderData.UpdateOptionsOrder(useConv: tASConversation): boolean;
+var
+  i: integer;
+begin
+	result := false;
+  ITEMRQ.Clear;
+  ITEMRQ.IRECTP.AsString := 'OPU';
+  ITEMRQ.IRF01.AsString := self.ORDETAIL.CONREF.AsString;
+  ITEMRQ.DoWrite(useConv);
+
+  for i := 0 to OPTVALDET.count - 1 do
+  begin
+    OPTVALDET.useRecord(i);
+    if (i + 1) = OPTVALDET.count then
+    begin
+      OPTVALDET.LASTR.AsString := 'Y';
+    end else
+    begin
+      OPTVALDET.LASTR.AsString := '';
+    end;
+		OPTVALDET.dowrite(useConv);
+  end;
+
+  if HEADER1.DoRead(useConv) then
+    if HEADER1.H1ERRO.AsString = '0' then
+      result := true;
+end;
+
+
+function tOrderData.ReadOrderRecordFormats(const useConv: tAsConversation): Boolean;
+var
+  i: Integer;
+begin
+  Result := false;
+  if HDR.DoRead(useConv) then
+  begin
+    if HDR.STATUS.AsString <> '' then
+      result := false
+    else
+    begin
+      // Status OK so ORDETAIL follows ....
+      if ORDETAIL.DoRead(useConv) then
+      begin
+        ORASSOC.DoRead(useConv);
+        DEALHDR.doRead(useConv);
+        ORDEAL.DoRead(useConv);
+        //read HEADER to find out how many deals to read
+        HEADER1.doRead(useConv);
+        for i := 0 to HEADER1.H1GEN1.AsInteger - 1 do
+          DEALIST.Read_Next(useConv);
+        //
+        result := true;
+        // If the order is an options order then get the details
+        if self.OptionsOrderType <> clNone then
+          result := fetchOptionsDetails(useConv, ORDETAIL.CONREF.AsString);
+      end;
+    end;
+  end;
+end;
+
+function tOrderData.AddNewFillsToBGOrder(const useConv: tAsConversation;
+  const errorCheck: tOrderValidationResult; const modeIsAdmin: Boolean;
+  const chgType: string; const AlertToBG: boolean): Boolean;
+var
+  foundNew: Boolean;
+  i: Integer;
+  bk, bkNew: tASBookmark;
+  bgConRef: string;
+  bgOrder: tOrderData;
+  itemrq: tITEMRQ;
+begin
+  Assert(ORDETAIL.ISSETS.AsString='Y', 'Not valid to add fills to B/G Order unless order ISSETS');
+  foundNew := false;
+  Result := false;
+  //loop through DEALIST to find out whether we have any new fills
+  for i := 0 to DEALIST.count - 1 do
+  begin
+    bk := DEALIST.Bookmark(i);
+    //Have we got a suffix?
+    if (DEALIST.OLDIDX.stringRead(bk) = '') and dealist.IsDealValid(bk) then
+    begin
+      foundNew := true;
+      break;
+    end;
+  end;
+  if foundNew then
+  begin
+    //Load in the order - get this from OTHEREF
+    bgConRef := ORDETAIL.OTHREF.AsString;
+    if bgConRef <> '' then
+    begin
+      itemrq := tITEMRQ.Create(nil);
+      bgOrder := tOrderData.Create(nil);
+      try
+        itemrq.IRF01.AsString := bgConRef;
+        if bgOrder.fetchSETSdeal(nil, itemrq, useConv) then
+        begin
+          for i := 0 to DEALIST.count - 1 do
+          begin
+            bk := DEALIST.Bookmark(i);
+            if (DEALIST.OLDIDX.stringRead(bk) = '') and dealist.IsDealValid(bk) then
+            begin
+              //new deal
+              bkNew := bgOrder.DEALIST.Add_Record;
+              bgOrder.DEALIST.copyBookmarkFields(DEALIST, bk, bkNew);
+            end;
+          end;
+          bgOrder.updateOrderAndDeal(useConv,
+                                     errorCheck,
+                                     modeIsAdmin,
+                                     chgType,
+                                     AlertToBG, True, self.ORDETAIL.TSCODE.AsString);
+          Result := true;
+        end
+      finally
+        bgOrder.Free;
+        itemrq.Free;
+      end;
+    end;
+  end
+  else
+    Result := true;
+end;
+
+procedure tOrderData.UpdateExternalReference( useConv: tASConversation; ExtRef: string );
+var
+  RefTrans: tSetExternalReferenceTransaction;
+begin
+  RefTrans := tSetExternalReferenceTransaction.create(nil);
+
+  try
+    RefTrans.setConversation(useConv);
+    RefTrans.contractReference := ORDETAIL.CONREF.AsString;
+    RefTrans.externalReference := ExtRef;
+
+    // Make it do the thing
+    RefTrans.Execute;
+
+    ORDETAIL.EXTREO.AsString := ExtRef;
+  finally
+    RefTrans.Free;
+  end;
+end;
+
+{**
+ * Fetch any client notes as required
+ *}
+function TOrderData.fetchClientNotes(Sender: tObject; useConv: tASConversation): boolean;
+var
+  trans: tGetNotesTransaction;
+
+begin
+  trans := tGetNotesTransaction.create(nil);
+
+  try
+    trans.setConversation(useConv);
+
+    // Make it do the thing
+    result := trans.Execute('ORD', 'CLI',
+                  copy(ORDETAIL.CONREF.AsString, 1, 5),
+                  copy(ORDETAIL.CONREF.AsString, 6, 6),
+                  '', '', '', '');
+
+    // process results
+    ORDETAIL.CLINOTES.AsString := trans.getNotesstring;
+  finally
+    trans.Free;
+  end;
+end;
+
+{**
+ * Fetch any contract notes as required
+ *}
+function TOrderData.fetchContractNotes(Sender: tObject; useConv: tASConversation): boolean;
+var
+  trans: tGetNotesTransaction;
+
+begin
+  trans := tGetNotesTransaction.create(nil);
+
+  try
+    trans.setConversation(useConv);
+
+    // Make it do the thing
+    result := trans.Execute('ORD', 'CON',
+                  copy(ORDETAIL.CONREF.AsString, 1, 5),
+                  copy(ORDETAIL.CONREF.AsString, 6, 6),
+                  '', '', '', '');
+
+    // process results
+    isOldConNotes := trans.getNotesstring;
+    ORDETAIL.CONNOTES.AsString := trans.getNotesstring;
+  finally
+    trans.Free;
+  end;
+end;
+
+function tOrderData.fetchDealingNotes(Sender: tObject; useConv: tASConversation): boolean;
+var
+  trans: tGetNotesTransaction;
+
+begin
+  trans := tGetNotesTransaction.create(nil);
+
+  try
+    trans.setConversation(useConv);
+
+    // Make it do the thing
+    result := trans.Execute('ORD', 'DEA',
+                  copy(ORDETAIL.CONREF.AsString, 1, 5),
+                  copy(ORDETAIL.CONREF.AsString, 6, 6),
+                  '', '', '', '');
+
+    // process results
+    isOldDealNotes := trans.getNotesstring;
+    ORDETAIL.DELNOTES.AsString := trans.getNotesstring;
+  finally
+    trans.Free;
+  end;
+end;
+
+procedure tOrderData.updateContractNotes(inITEMRQ: tITEMRQ; useConv: tASConversation);
+var
+  trans: tSetNotesTransaction;
+
+begin
+  if (ConNotes <> isOldConNotes) then
+  begin
+    trans := tSetNotesTransaction.create(nil);
+
+    try
+      trans.setConversation(useConv);
+
+      // Make it do the thing
+      trans.Execute('ORD', 'CON',
+                    copy(ORDETAIL.CONREF.AsString, 1, 5),
+                    copy(ORDETAIL.CONREF.AsString, 6, 6),
+                    '', '', '', '', self.ConNotes);
+    finally
+      trans.Free;
+    end;
+  end;
+end;
+
+procedure tOrderData.updateDealingNotes(inITEMRQ: tITEMRQ; useConv: tASConversation);
+var
+  trans: tSetNotesTransaction;
+
+begin
+  if (DealNotes <> isOldDealNotes) then
+  begin
+    trans := tSetNotesTransaction.create(nil);
+
+    try
+      trans.setConversation(useConv);
+
+      // Make it do the thing
+      trans.Execute('ORD', 'DEA',
+                    copy(ORDETAIL.CONREF.AsString, 1, 5),
+                    copy(ORDETAIL.CONREF.AsString, 6, 6),
+                    '', '', '', '', self.DealNotes);
+    finally
+      trans.Free;
+    end;
+  end;
+end;
+
+function tOrderData.getAuthNotes: string;
+begin
+  result := AUTRECPC.ATNOTES.AsString;
+end;
+
+procedure tOrderData.setAuthNotes(val: string);
+begin
+  AUTRECPC.ATNOTES.AsString := val;
+end;
+
+function tOrderData.Uncapture(useConv: tASConversation; out outStatus: string): Boolean;
+begin
+  with ITEMRQ do
+  begin
+    clear;
+    IRECTP.AsString := 'OU3';
+    IRF01.AsString := ORDETAIL.CONREF.AsString;
+    IRF02.AsInteger := ORDETAIL.ORDLCK.AsInteger;
+    IRF04.AsString := ORASSOC.ORDSTS.AsString;
+    doWrite(useConv);
+  end;
+
+  HDR.doRead(useConv);
+  outStatus := HDR.STATUS.AsString;
+  result := outStatus = '';
+end;
+
+function tOrderData.DoneForDay(useConv: tASConversation): boolean;
+var
+  DFDTrans: tDoneForDayTransaction;
+begin
+  DFDTrans := tDoneForDayTransaction.create(nil);
+
+  try
+    DFDTrans.setConversation(useConv);
+    DFDTrans.contractReference := ORDETAIL.CONREF.AsString;
+
+    // Make it do the thing
+    result := DFDTrans.Execute and (DFDTrans.errorStatus = '');
+  finally
+    DFDTrans.Free;
+  end;
+end;
+
+end.
