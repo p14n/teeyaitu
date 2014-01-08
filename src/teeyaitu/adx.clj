@@ -18,7 +18,6 @@
 (defn abs [x]
   (if (< x 0) (* x -1) x))
 
-
 (defn calc-tr [curr-hi curr-lo prev-close]
   (let [hi-less-lo (- curr-hi curr-lo)
         hi-less-close (- curr-hi prev-close)

@@ -7,6 +7,7 @@
                  [org.clojure/clojure "1.4.0"],
                  [incanter/incanter-core "1.4.1"]
                  [enlive "1.0.1"]
+                 [clojure-csv/clojure-csv "2.0.1"]
                  ]
   :java-source-paths ["java/src","java/test"]
   :profiles {:dev {:dependencies [[midje "1.5.1"]]

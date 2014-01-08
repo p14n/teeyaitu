@@ -1,6 +1,21 @@
 (ns teeyaitu.adx-test
   (:use teeyaitu.adx
-        midje.sweet))
+        midje.sweet
+        clojure-csv.core
+        ))
+
+(defonce test-vals
+  (parse-csv (clojure.string/replace
+              (slurp "test/cs-adx.csv") "\r" "\n")))
+
+(def test-days
+  (map #(-> {
+             :high (first %)
+             :low (second %)
+             :close (nth % 2)} )
+       test-vals))
+
+(def test-adxs (map calc-adx [] test-days))
 
 (defn day [high low close]
   {:high high :low low :close close})
@@ -15,6 +30,11 @@
 
 (fact "Sums previous TR and DM values"
       (let [adxs [day1 (calc-tr-and-dm day1 day2)]
-            summed (calc-adx-initial adxs day3)]
+            summed (calc-tr14-initial adxs day3)]
         (summed :TR14)
         ) => 0.57M)
+
+(fact "ADX value 27 should be 33.58"
+      ((nth test-adxs 27) :ADX) => 33.58)
+
+
