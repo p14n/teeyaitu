@@ -16,5 +16,5 @@
 (fact "Sums previous TR and DM values"
       (let [adxs [day1 (calc-tr-and-dm day1 day2)]
             summed (calc-adx-initial adxs day3)]
-        ((last summed) :TR14)
+        (summed :TR14)
         ) => 0.57M)
