@@ -40,14 +40,23 @@
       prev-low-less-curr-low
       0)))
 
-(defn calc-adx-initial [adxs new-day]
-  "To be used to calculate the initial value of TR14"
-  )
 (defn calc-tr-and-dm [prev current]
   (-> current
       (assoc :TR (calc-tr (current :high) (current :low) (prev :close)))
       (assoc :+DM (calc-plus-dm (prev :high) (prev :low) (current :high) (current :low)))
-      (assoc :-DM (calc-minus-dm (prev :high) (prev :low) (current :high) (current :low))))
+      (assoc :-DM (calc-minus-dm (prev :high) (prev :low) (current :high) (current :low)))))
+
+(defn sum-tr-and-dm [summed nextday]
+    (-> summed
+        (assoc :TR14 (+ (summed :TR14 0) (nextday :TR 0)))
+        (assoc :+DM14 (+ (summed :+DM14 0) (nextday :+DM 0)))
+        (assoc :-DM14 (+ (summed :-DM14 0) (nextday :-DM 0)))
+        ))
+
+(defn calc-adx-initial [adxs new-day]
+  "To be used to calculate the initial value of TR14"
+  (conj adxs (reduce sum-tr-and-dm new-day adxs)))
+
   
 (defn calc-adx-full [adxs new-day]
   "To be used to calculate new values once TR14 has been initialised"
@@ -59,5 +68,5 @@
       (cond (> so-far values-required) (calc-adx-full adxs new-day)
             (= so-far values-required) (calc-adx-initial adxs new-day)
             (= so-far 0) (conj adxs new-day)
-            (conj adxs (calc-tr-and-dm (last adxs) new-day)))))
+            (true) (conj adxs (calc-tr-and-dm (last adxs) new-day)))))
 
