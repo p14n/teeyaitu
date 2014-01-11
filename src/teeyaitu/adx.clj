@@ -1,4 +1,5 @@
 (ns teeyaitu.adx)
+(import java.math.RoundingMode)
 
 (def adx-vals {:day 131201
                :high 0.0
@@ -18,7 +19,10 @@
 (defn abs [x]
   (if (< x 0) (* x -1) x))
 
-(defn div2dp [x y] (with-precision 2 (/ x y)))
+(defn div [x y] (with-precision 10 (/ x y)))
+
+(defn dp [scale num] "Decimal points"
+  (.setScale (bigdec num) scale RoundingMode/HALF_DOWN))
 
 (defn calc-tr [curr-hi curr-lo prev-close]
   (let [hi-less-lo (- curr-hi curr-lo)
@@ -49,14 +53,14 @@
       (assoc :-DM (calc-minus-dm (prev :high) (prev :low) (current :high) (current :low)))))
 
 (defn calc-di-and-dx [curr]
-  (let [plus-di14 (with-precision 2 (* 100 (div2dp (curr :+DM14) (curr :TR14))))
-        minus-di14 (with-precision 2 (* 100 (div2dp (curr :-DM14) (curr :TR14))))
+  (let [plus-di14 (dp 2 (* 100 (div (curr :+DM14) (curr :TR14))))
+        minus-di14 (dp 2 (* 100 (div (curr :-DM14) (curr :TR14))))
         di14-diff (abs (- plus-di14 minus-di14))
         di14-sum (+ plus-di14 minus-di14)]
     (-> curr
         (assoc :+DI14 plus-di14)
         (assoc :-DI14 minus-di14)        
-        (assoc :DX (div2dp (* 100 di14-diff) di14-sum)))))
+        (assoc :DX (dp 2 (div (* 100 di14-diff) di14-sum))))))
 
 (defn sum-tr-and-dm [summed nextday]
     (-> summed
@@ -77,7 +81,7 @@
 (defn calc-single-adx [curr prev]
   (let [prev-adx (prev :ADX 0)]
     (if (> prev-adx 0)
-      (assoc curr :ADX (div2dp (+ (curr :DX) (* prev-adx 13) ) 14))
+      (assoc curr :ADX (dp 2 (div (+ (curr :DX) (* prev-adx 13) ) 14)))
       curr)))
 
 (defn calc-tr14-full [adxs new-day]
@@ -88,23 +92,29 @@
         prev-plus-dm14 (prev :+DM14)
         prev-minus-dm14 (prev :-DM14)]
     (-> current
-        (assoc :TR14 (+ (- prev-tr-14 (div2dp prev-tr-14 14)) (current :TR)))
-        (assoc :+DM14 (+ (- prev-plus-dm14 (div2dp prev-plus-dm14 14)) (current :+DM)))
-        (assoc :-DM14 (+ (- prev-minus-dm14 (div2dp prev-minus-dm14 14)) (current :-DM)))
+        (assoc :TR14 (+ (- prev-tr-14 (div prev-tr-14 14)) (current :TR)))
+        (assoc :+DM14 (+ (- prev-plus-dm14 (div prev-plus-dm14 14)) (current :+DM)))
+        (assoc :-DM14 (+ (- prev-minus-dm14 (div prev-minus-dm14 14)) (current :-DM)))
         calc-di-and-dx
         (calc-single-adx prev)
         )))
 
 (defn set-initial-adx [adxs current]
-  (assoc current :ADX (div2dp (reduce #(+ %1 (%2 :high)) 0 adxs) 14)))
+  (assoc current :ADX (dp 2 (div
+                              (+ (:DX current 0)
+                                 (reduce #(+ %1 (%2 :DX 0)) 0 adxs))
+                              14))))
 
 (defn calc-adx [adxs new-day]
   (let [so-far (count adxs)
         values-required 14]
-    (cond (= so-far (* 2 values-required)) (conj adxs (calc-tr14-full adxs (set-initial-adx adxs new-day)))
-            (> so-far values-required) (conj adxs (calc-tr14-full adxs new-day))
-            (= so-far values-required)
-            (conj adxs (calc-tr14-initial adxs                                                                     (calc-tr-and-dm (last adxs) new-day)))
-            (= so-far 0) (conj adxs new-day)
-            (= 1 1) (conj adxs (calc-tr-and-dm (last adxs) new-day)))))
+    (cond
+     (= so-far (- (* 2 values-required) 1))
+      (conj adxs (set-initial-adx adxs (calc-tr14-full adxs new-day)))
+     (> so-far values-required)
+      (conj adxs (calc-single-adx (calc-tr14-full adxs new-day) (last adxs)))
+     (= so-far values-required)
+      (conj adxs (calc-tr14-initial adxs                                                              (calc-tr-and-dm (last adxs) new-day)))
+     (= so-far 0) (conj adxs new-day)
+     (= 1 1) (conj adxs (calc-tr-and-dm (last adxs) new-day)))))
 

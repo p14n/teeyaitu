@@ -4,7 +4,7 @@
         clojure-csv.core
         ))
 
-(def test-vals
+(defonce test-vals
   (parse-csv (clojure.string/replace
               (slurp "test/cs-adx.csv") "\r" "\n")))
 
@@ -50,6 +50,8 @@
         ) => 0.57M)
 
 (fact "ADX value 27 should be 33.58"
-      ((nth test-adxs 28) :ADX) => 33.58)
+      ((nth test-adxs 27) :ADX) => 33.58M)
+(fact "Last ADX value should be 16.69"
+      ((last test-adxs) :ADX) => 16.69M)
 
 
