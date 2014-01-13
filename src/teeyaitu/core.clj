@@ -36,12 +36,17 @@
     (.set cal Calendar/DATE day)
     cal))
 
+(defn diff-in-days [today earlier]
+  (let [today-ms (.getTimeInMillis (date-int-to-cal today))
+        x-ms (.getTimeInMillis (date-int-to-cal earlier))]
+    (/ (- today-ms x-ms) 86400000 )))
 
 (defn in-last-7-days? [today x]
-  (let [today-ms (.getTimeInMillis (date-int-to-cal today))
-        x-ms (.getTimeInMillis (date-int-to-cal x))
-        diff-days (/ (- today-ms x-ms) 86400000 )]
-    (< diff-days 7)))
+  (< (diff-in-days today x) 7))
+
+(defn over-2-days? [today x]
+  (> (diff-in-days today x) 2))
+
 
 (defn outperforms? [x y by-amount]
   (cond (>= y 0) (> x (+ y by-amount))
@@ -61,4 +66,20 @@
           (in-last-7-days? (:date today) (:date year-low)) #{:LOW}
           (outperforms? perf-3m ftse-3m-performance 15M) #{:OUTPERFORM}
           (> highest-adx 30) #{:ADX}
-          (= 1 1) #{})))
+          :else #{})))
+
+(defn recent-2m-high [day-index all-adxs]
+  (let [start-2m (max (- day-index 40) 0)
+        adxs-2m (subvec all-adxs start-2m day-index)
+        today (nth all-adxs day-index)
+        high-2m (highest adxs-2m)
+        low-2m (lowest adxs-2m)]
+    (if (and (in-last-7-days? (:date today) (:date high-2m))
+             (over-2-days? (:date today) (:date high-2m))
+             (< (:close today) (:high high-2m)))
+      true
+      (if (and (in-last-7-days? (:date today) (:date low-2m))
+             (over-2-days? (:date today) (:date low-2m))
+             (> (:close today) (:low high-2m)))
+      true
+      false))))
