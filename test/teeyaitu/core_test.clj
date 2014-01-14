@@ -2,7 +2,39 @@
   (:use teeyaitu.core
         teeyaitu.adx
         midje.sweet
-        clojure-csv.core))
+        clojure-csv.core)
+  (import java.util.Calendar))
+
+
+(defonce test-vals
+  (parse-csv (clojure.string/replace
+              (slurp "test/cs-adx.csv") "\r" "\n")))
+
+(defn to-bigdec [x]
+  (with-precision 10 :rounding HALF_UP (bigdec x)))
+
+(def cal (Calendar/getInstance))
+
+(defn add-day [] (do (.add cal Calendar/DATE 1) cal))
+
+(defn cal-to-int [x]
+  (let [year (.get cal Calendar/YEAR)
+        month (+ 1 (.get cal Calendar/MONTH))
+        day (.get cal Calendar/DATE)
+        ]
+    (- (+ (* year 10000) (* month 100) day) 20000000)))
+
+(def test-days
+  (map #(-> {
+             :high (to-bigdec (first %))
+             :low (to-bigdec (second %))
+             :close (to-bigdec (nth % 2))
+             :date (cal-to-int (add-day))
+             }
+            )
+       test-vals))
+
+(def test-adxs (reduce calc-adx [] test-days))
 
 (fact "Gets highest"
       (let [high {:high 3}

@@ -1,8 +1,5 @@
 (ns teeyaitu.core)
 (require '(clojure [string :as string]))
-(require '(net.cgrand [enlive-html :as html]))
-(use 'incanter.core)
-(import [java.net URL])
 (import java.util.Calendar)
 
 ;;For each stock examine the last 7 days for
@@ -61,14 +58,16 @@
         year-low (lowest values-this-year)
         today (nth all-adxs day-index)
         perf-3m (perf (nth all-adxs three-m-start) today)
-        highest-adx (reduce #(max %1 (:ADX %2)) 0 (subvec all-adxs week-start day-index ))]
+        highest-adx (reduce #(if (> (:ADX %1 0) (:ADX %2)) %1 %2) {} (subvec all-adxs week-start day-index ))]
     (cond (in-last-7-days? (:date today) (:date year-high)) #{:HIGH}
           (in-last-7-days? (:date today) (:date year-low)) #{:LOW}
-          (outperforms? perf-3m ftse-3m-performance 15M) #{:OUTPERFORM}
-          (> highest-adx 30) #{:ADX}
+          (outperforms? perf-3m ftse-3m-performance 15M)
+           (if (> perf-3m 0) #{:OUTPERFORM-BULL} #{:OUTPERFORM-BEAR})
+          (> (:ADX highest-adx) 30)
+           (if (> (:+DI14 highest-adx) (:-DI14 highest-adx)) #{:ADX-BULL} #{:ADX-BEAR})
           :else #{})))
 
-(defn recent-2m-high [day-index all-adxs]
+(defn recent-2m-high? [day-index all-adxs]
   (let [start-2m (max (- day-index 40) 0)
         adxs-2m (subvec all-adxs start-2m day-index)
         today (nth all-adxs day-index)
@@ -83,3 +82,42 @@
              (> (:close today) (:low high-2m)))
       true
       false))))
+
+;;Calculate adx for stock
+;;step through each day, determine watchlist for the day
+;;if watchlist, determine pullback setups
+;;look at trades, stop if low<stop
+;;look at yesterdays setups, trigger trades if high>entry
+
+(defn find-setups [day-index stock-adxs ftse-3m-perf]
+  (let [watchlist-val (on-watchlist day-index stock-adxs ftse-3m-perf)]
+    (if (empty? watchlist-val)
+      {}
+      (if (recent-2m-high? stock-adxs day-index)
+        {:watch watchlist-val :setup true}
+        {:watch watchlist-val :setup false}))))
+
+(defn add-watchlist-and-setups [watchlist stock-name range-of-days stock-adxs ftse-3m-vals]
+  (let [merge-function
+        #(let [today (nth stock-adxs %2)
+               day-setup (find-setups %2 stock-adxs (ftse-3m-vals (:date today) 0))]
+           (if (empty? day-setup)
+             %1
+             (-> %1
+                 (assoc-in (:date today) :watch stock-name day-setup)
+                 (assoc-in (:date today) :setup stock-name
+                           (if (:setup day-setup) today {}))
+                 )))]
+    (reduce merge-function watchlist range-of-days)))
+
+(defn faky-trady [stock-name stock-adxs ftse-3m-vals]
+  (let [watchlist (add-watchlist-and-setups
+                   (sorted-map {})
+                   stock-name
+                   (range 0 (count stock-adxs))
+                   ftse-3m-vals)]
+;;loop through the adxs and watchlist opening and closinfg trades 
+    ))
+
+
+
