@@ -5,13 +5,9 @@
         clojure-csv.core)
   (import java.util.Calendar))
 
-
 (defonce test-vals
   (parse-csv (clojure.string/replace
               (slurp "test/cs-adx.csv") "\r" "\n")))
-
-(defn to-bigdec [x]
-  (with-precision 10 :rounding HALF_UP (bigdec x)))
 
 (def cal (Calendar/getInstance))
 

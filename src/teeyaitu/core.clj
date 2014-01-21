@@ -14,6 +14,9 @@
 ;;For this sublist, find stocks that go through the previous days
 ;; high/low
 
+(defn to-bigdec [x]
+  (with-precision 10 :rounding HALF_UP (bigdec x)))
+
 (defn highest [days]
   (reduce #(if (> (%1 :high 0) (%2 :high)) %1 %2) {} days))
 
@@ -100,7 +103,7 @@
 (defn add-watchlist-and-setups [watchlist stock-name range-of-days stock-adxs ftse-3m-vals]
   (let [merge-function
         #(let [today (nth stock-adxs %2)
-               day-setup (find-setups %2 stock-adxs (ftse-3m-vals (:date today) 0))]
+               day-setup (find-setups %2 stock-adxs (ftse-3m-vals (:date today) 100))]
            (if (empty? day-setup)
              %1
              (-> %1
@@ -158,7 +161,7 @@
 
 (defn faky-trady [stock-name stock-adxs ftse-3m-vals]
   (let [watchlist (add-watchlist-and-setups
-                   (sorted-map {})
+                   (sorted-map)
                    stock-name
                    (range 0 (count stock-adxs))
                    ftse-3m-vals)
@@ -178,9 +181,8 @@
             (if (< (:low today-adxs) (:low yesterday-adxs))
                 (add-trade (:low yesterday-adxs) (:high yesterday-adxs))
                 ))
-          (println (str i "" trades))))
-      (if (< i day-count) (recur (inc i)))
-      )))
+          (println (str i " " trades))))
+      (if (< i day-count) (recur (inc i))))))
 
 
 
