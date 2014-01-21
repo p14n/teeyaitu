@@ -66,8 +66,8 @@
       (outperforms? -40 -35 10) => false)
 
 (fact "Can add trade"
-      (add-trade 130.0M 150.0M)
-      (first @trades) => {:closed false :long false :open 130.0M :stop  150.0M})
+      (first (add-trade [] 130.0M 150.0M))
+       => {:closed false :long false :open 130.0M :stop  150.0M})
 
 (fact "Can calculate open profit on short"
       (calc-open-profit {:low 120.0M} {:closed false :long false :open 130.0M :stop 150.0M})
