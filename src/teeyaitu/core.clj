@@ -123,11 +123,12 @@
    (contains? watch :HIGH)
    (contains? watch :OUTPERFORM-BULL)))
 
-(defn add-trade [trades open stop watch]
+(defn add-trade [trades open stop watch date]
   (println "Open at " open)
   (conj trades {:closed false :open open :stop stop
                 :long (> open stop)
-                :watch watch}))
+                :watch watch
+                :date date}))
 
 
 (defn close-stopped-trade [today trade]
@@ -136,12 +137,14 @@
         (if (<= (:low today) (:stop trade))
           (-> trade
               (assoc :closed true)
-              (assoc :profit (- (:stop trade) (:open trade))))
+              (assoc :profit (- (:stop trade) (:open trade)))
+              (assoc :closedate (:date today)))
           trade)
         (if (>= (:high today) (:stop trade))
           (-> trade
               (assoc :closed true)
-              (assoc :profit (- (:open trade) (:stop trade)))) trade))))
+              (assoc :profit (- (:open trade) (:stop trade)))
+              (assoc :closedate (:date today))) trade))))
 
 (defn close-stopped-trades [trades today]
   (doall (map (partial close-stopped-trade today) trades)))
@@ -163,7 +166,7 @@
 (defn calc-open-profit-on-trades [trades today]
   (doall (map (partial calc-open-profit today) trades)))
 
-(defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs]
+(defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs last-week-adxs]
   (println (str "setup " (:setup watch-and-setup)
                 " watch " watch-and-setup " "
                 (:date yesterday-adxs) " : "
@@ -178,14 +181,30 @@
            (:high today-adxs)
            (:high yesterday-adxs))
         (add-trade trades (:high yesterday-adxs)
-                   (:low yesterday-adxs) watch-and-setup)
+                   (:low (lowest last-week-adxs)) watch-and-setup (:date today-adxs))
        trades)
      (if (<
           (:low today-adxs)
           (:low yesterday-adxs 0))
        (add-trade trades (:low yesterday-adxs)
-                  (:high yesterday-adxs) watch-and-setup)
+                  (:high (highest last-week-adxs)) watch-and-setup (:date today-adxs))
        trades))))
+
+(defn report-trades [trades]
+  (sort (map #(str
+               (:date %) "-"
+               (:closedate %) " "
+               (:profit %) " ("
+               (:max-profit % 0) ")") trades)))
+
+(defn all-profit [trades]
+  (reduce #(+ %1 (:profit %2)) 0 trades))
+(defn max-profit [trades]
+  (reduce #(+ %1 (:max-profit %2 0)) 0 trades))
+
+(defn last-5 [coll last-index]
+  (let [start (max (- last-index 5) 0)]
+    (subvec coll start last-index)))
 
 (defn faky-trady [stock-name stock-adxs ftse-3m-vals]
   (let [watchlist (add-watchlist-and-setups
@@ -205,7 +224,11 @@
             new-trades (-> trades
                 (close-stopped-trades today-adxs)
                 (calc-open-profit-on-trades today-adxs)
-                (open-new-trades watch-and-setup today-adxs yesterday-adxs))]
+                (open-new-trades
+                 watch-and-setup
+                 today-adxs
+                 yesterday-adxs
+                 (last-5 stock-adxs (dec i))))]
         (if (>= i day-count) new-trades (recur (inc i) new-trades)) ))))
 
 
