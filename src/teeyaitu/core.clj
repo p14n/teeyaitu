@@ -123,28 +123,63 @@
    (contains? watch :HIGH)
    (contains? watch :OUTPERFORM-BULL)))
 
-(defn add-trade [trades open stop watch date]
+(defn add-trade [trades open stop watch date stock-name]
   (println "Open at " open)
   (conj trades {:closed false :open open :stop stop
                 :long (> open stop)
                 :watch watch
-                :date date}))
+                :date date
+                :risk (if (> open stop) (- open stop) (- stop open))
+                :name stock-name}))
+
+(defn take-profits [trade today]
+  (if (>= (:profit trade) (* 10M (:risk trade)))
+    (assoc trade :stop (if (:long trade) (:high today) (:low today)))
+    trade))
+
+(defn move-break-even [trade today]
+  (if (> (:profit trade) (* 2 (:risk trade)))
+    (assoc trade :stop (:open trade))
+    trade))
+
+(defn apply-stops [trade today]
+  (-> trade
+      ;(trailing-stop today)
+      ;(timeout-trade today)
+      (take-profits today)
+      ;;(move-break-even today)
+      ))
 
 
-(defn close-stopped-trade [today trade]
-  (if (:closed trade) trade
-      (if (:long trade)
-        (if (<= (:low today) (:stop trade))
-          (-> trade
-              (assoc :closed true)
-              (assoc :profit (- (:stop trade) (:open trade)))
-              (assoc :closedate (:date today)))
-          trade)
-        (if (>= (:high today) (:stop trade))
-          (-> trade
-              (assoc :closed true)
-              (assoc :profit (- (:open trade) (:stop trade)))
-              (assoc :closedate (:date today))) trade))))
+(defn trailing-stop [trade today]
+  (if (:long trade)
+    (assoc trade :stop (max (:stop trade)
+                            (- (:high today) (* 1M (:risk trade)))))
+    (assoc trade :stop (min (:stop trade)
+                            (+ (:low today) (* 1M (:risk trade)))))))
+
+
+(defn close-stopped-trade [today opentrade]
+  (if (:closed opentrade) opentrade
+      (let [trade (apply-stops opentrade today)]
+        (if (:long trade)
+          (if (<= (:low today) (:stop trade))
+            (-> trade
+                (assoc :closed true)
+                (assoc :profit (- (:stop trade) (:open trade)))
+                (assoc :closedate (:date today)))
+            trade)
+          (if (>= (:high today) (:stop trade))
+            (-> trade
+                (assoc :closed true)
+                (assoc :profit (- (:open trade) (:stop trade)))
+                (assoc :closedate (:date today))) trade)))))
+
+(defn timeout-trade [trade today]
+  (let [days (diff-in-days (:date today) (:date trade))]
+    (if (and (> days 7) (< (:profit trade) (* 2 (:risk trade))))
+      (assoc trade :stop (:close today))
+      trade)))
 
 (defn close-stopped-trades [trades today]
   (doall (map (partial close-stopped-trade today) trades)))
@@ -166,29 +201,26 @@
 (defn calc-open-profit-on-trades [trades today]
   (doall (map (partial calc-open-profit today) trades)))
 
-(defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs last-week-adxs]
-  (println (str "setup " (:setup watch-and-setup)
-                " watch " watch-and-setup " "
-                (:date yesterday-adxs) " : "
-                (:high yesterday-adxs) " : " (:low yesterday-adxs) " : "
-                (:date today-adxs) " : "
-                (:high today-adxs) " : " (:low today-adxs)
-                ))
-  (if (not (:setup watch-and-setup))
+(defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs last-week-adxs stock-name]
+  (if (or (not (:setup watch-and-setup))
+          (> (count (filter #(not (:closed %)) trades)) 0))
     trades
     (if (bull-watch (:watch watch-and-setup))
-      (if (>
-           (:high today-adxs)
-           (:high yesterday-adxs))
-        (add-trade trades (:high yesterday-adxs)
-                   (:low (lowest last-week-adxs)) watch-and-setup (:date today-adxs))
-       trades)
-     (if (<
-          (:low today-adxs)
-          (:low yesterday-adxs 0))
-       (add-trade trades (:low yesterday-adxs)
-                  (:high (highest last-week-adxs)) watch-and-setup (:date today-adxs))
-       trades))))
+      (let [initial-stop (:low (lowest last-week-adxs))]
+        (if (and (< initial-stop (:high yesterday-adxs))
+                 (> (:high today-adxs)
+                    (:high yesterday-adxs)))
+          (add-trade trades (:high yesterday-adxs)
+                     initial-stop watch-and-setup (:date today-adxs) stock-name)
+          trades))
+      (let [initial-stop (:high (highest last-week-adxs))]
+        (if (and (> initial-stop (:low yesterday-adxs))
+                 (<
+                  (:low today-adxs)
+                  (:low yesterday-adxs 0)))
+          (add-trade trades (:low yesterday-adxs)
+                     initial-stop watch-and-setup (:date today-adxs) stock-name)
+          trades)))))
 
 (defn report-trades [trades]
   (sort (map #(str
@@ -201,6 +233,7 @@
   (reduce #(+ %1 (:profit %2)) 0 trades))
 (defn max-profit [trades]
   (reduce #(+ %1 (:max-profit %2 0)) 0 trades))
+
 
 (defn last-5 [coll last-index]
   (let [start (max (- last-index 5) 0)]
@@ -222,13 +255,14 @@
             yesterday (:date yesterday-adxs)
             watch-and-setup (:watch (watchlist yesterday {}))
             new-trades (-> trades
-                (close-stopped-trades today-adxs)
                 (calc-open-profit-on-trades today-adxs)
+                (close-stopped-trades today-adxs)
                 (open-new-trades
-                 watch-and-setup
-                 today-adxs
-                 yesterday-adxs
-                 (last-5 stock-adxs (dec i))))]
+                  watch-and-setup
+                  today-adxs
+                  yesterday-adxs
+                  (last-5 stock-adxs (dec i))
+                  stock-name))]
         (if (>= i day-count) new-trades (recur (inc i) new-trades)) ))))
 
 

@@ -7,7 +7,7 @@
 (defn save-350-to-disk
   ([] (save-350-to-disk 350 (fetch-350-tickers)))
   ([last-x all-tickers]
-   (map fetch-and-save-prices (take-last last-x (all-tickers)))))
+   (map fetch-and-save-prices (take-last last-x all-tickers))))
 
 (defn get-saved-data-stocks []
   (map

@@ -18,7 +18,7 @@
 (defn fetch-and-save-prices[stock]
   (try 
     (spit (str "data/" stock ".csv")
-          (fetch-url (str "http://ichart.finance.yahoo.com/table.csv?s=" stock "&d=0&e=23&f=2014&g=d&a=4&b=24&c=1999&ignore=.csv")))
+          (fetch-from-url (str "http://ichart.finance.yahoo.com/table.csv?s=" stock "&d=0&e=23&f=2014&g=d&a=4&b=24&c=1999&ignore=.csv")))
     (catch Exception e (println (str "Couldn't get " stock " " (.getMessage e))))))
 
 (defn html-from-file[x]
