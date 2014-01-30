@@ -3,6 +3,7 @@
 /classes
 /checkouts
 data/
+results/
 pom.xml
 pom.xml.asc
 *.jar
