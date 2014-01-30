@@ -54,3 +54,13 @@
                                           :high (to-bigdec (nth % 2))
                                           :low (to-bigdec (nth % 3))
                                           :close (to-bigdec (nth % 4))}) csv-prices))
+
+(defn to-csv-row [t]
+  (clojure.string/join "," (list (:date t) (:name t) (if (:long t) "Long" "Short") (:ATR t) (:open t) (:risk t) (:max-profit t) (:closedate t) (:profit t))))
+
+(defn to-csv[trades filename]
+  (let [rows (map to-csv-row trades)]
+    (spit filename (str "Open date,Stock,Direction,ATR,Open,Risk,Max profit,Closed,Profit\n"
+                        (clojure.string/join "\n" rows)))))
+
+(defn sort-trades[trades] (sort #(- (:date %1 0) (:date %2 0)) trades))

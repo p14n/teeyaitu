@@ -69,12 +69,19 @@
         (assoc :-DM14 (+ (summed :-DM14 0) (nextday :-DM 0)))
         ))
 
+(defn true-range [day]
+  (- (:high day 0) (:low day 0)))
+
 (defn calc-tr14-initial [adxs new-day]
   "To be used to calculate the initial value of TR14"
-  (let [initial-val (-> new-day
+  (let [atr (div (reduce #(+ %1 (true-range %2)) (true-range new-day)
+                       (take-last 13 adxs)) 14)
+        initial-val (-> new-day
                         (assoc :TR14 (new-day :TR 0))
                         (assoc :+DM14 (new-day :+DM 0))
-                        (assoc :-DM14 (new-day :-DM 0)))]
+                        (assoc :-DM14 (new-day :-DM 0))
+                        (assoc :ATR atr)
+                        )]
     (calc-di-and-dx (reduce sum-tr-and-dm initial-val adxs))))
 
 
@@ -84,17 +91,22 @@
       (assoc curr :ADX (dp 2 (div (+ (curr :DX) (* prev-adx 13) ) 14)))
       curr)))
 
+
+
 (defn calc-tr14-full [adxs new-day]
   "To be used to calculate new values once TR14 has been initialised"
   (let [prev (last adxs)
         current (calc-tr-and-dm prev new-day)
         prev-tr-14 (prev :TR14)
         prev-plus-dm14 (prev :+DM14)
-        prev-minus-dm14 (prev :-DM14)]
+        prev-minus-dm14 (prev :-DM14)
+        atr (div (+ (true-range new-day) (* (:ATR prev) 13)) 14)
+        ]
     (-> current
         (assoc :TR14 (+ (- prev-tr-14 (div prev-tr-14 14)) (current :TR)))
         (assoc :+DM14 (+ (- prev-plus-dm14 (div prev-plus-dm14 14)) (current :+DM)))
         (assoc :-DM14 (+ (- prev-minus-dm14 (div prev-minus-dm14 14)) (current :-DM)))
+        (assoc :ATR atr)
         calc-di-and-dx
         (calc-single-adx prev)
         )))
@@ -117,4 +129,5 @@
       (conj adxs (calc-tr14-initial adxs                                                              (calc-tr-and-dm (last adxs) new-day)))
      (= so-far 0) (conj adxs new-day)
      (= 1 1) (conj adxs (calc-tr-and-dm (last adxs) new-day)))))
+
 

@@ -18,7 +18,8 @@
   (let [day-prices (csv-prices-to-day-map (load-values-from-csv stock))
         adx-values (reduce calc-adx [] day-prices)]
     (try (faky-trady stock adx-values ftse-3m-vals)
-         (catch Exception e (println (str "Couldn't calc trades on " stock " " (.toString e)))))
+         (catch Exception e ( println (str "Couldn't calc trades on " stock " " (.toString e))) ))
+    
     ))
 
 (defn faky-all [ftse-3m-vals]
