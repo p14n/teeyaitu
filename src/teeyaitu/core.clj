@@ -211,24 +211,32 @@
 (defn calc-open-profit-on-trades [trades today]
   (doall (map (partial calc-open-profit today) trades)))
 
+(defn calc-initial-stop [long last-week-adxs yesterday-adxs today-adxs]
+  (if long
+    (min (:low (lowest last-week-adxs))
+         (- (:high yesterday-adxs) (:ATR today-adxs)))
+    (max (:high (highest last-week-adxs))
+         (+ (:low yesterday-adxs) (:ATR today-adxs)))))
+
+
 (defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs last-week-adxs stock-name]
   (if (or (not (:setup watch-and-setup))
           (> (count (filter #(not (:closed %)) trades)) 0))
     trades
-    (if (bull-watch (:watch watch-and-setup))
-      (let [initial-stop (min
-                          (:low (lowest last-week-adxs))
-                          (- (:high yesterday-adxs) (:ATR today-adxs)))]
+    (let [long (bull-watch (:watch watch-and-setup)) 
+          initial-stop (calc-initial-stop
+                        long
+                        last-week-adxs
+                        yesterday-adxs
+                        today-adxs)]
+      (if long
         (if (and (< initial-stop (:high yesterday-adxs))
                  (> (:high today-adxs)
                     (:high yesterday-adxs)))
           (add-trade trades (:high yesterday-adxs)
                      initial-stop watch-and-setup (:date today-adxs)
                      stock-name (:ATR today-adxs))
-          trades))
-      (let [initial-stop (max
-                          (:high (highest last-week-adxs))
-                          (+ (:low yesterday-adxs) (:ATR today-adxs)))]
+          trades)
         (if (and (> initial-stop (:low yesterday-adxs))
                  (<
                   (:low today-adxs)
