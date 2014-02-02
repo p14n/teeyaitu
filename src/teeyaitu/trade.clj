@@ -22,11 +22,12 @@
     
     ))
 
+(defn faky-all [ftse-3m-vals]
+  (map #(faky-one % ftse-3m-vals) (get-saved-data-stocks)))
+
 (defn faky-all-to-csv [filename]
   (to-csv (sort-trades (flatten (faky-all {}))) filename))
 
-(defn faky-all [ftse-3m-vals]
-  (map #(faky-one % ftse-3m-vals) (get-saved-data-stocks)))
 
 (defn look-for-setups [stock-name]
   (try
