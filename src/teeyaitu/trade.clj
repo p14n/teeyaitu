@@ -22,6 +22,34 @@
     
     ))
 
+(defn faky-all-to-csv [filename]
+  (to-csv (sort-trades (flatten (faky-all {}))) filename))
+
 (defn faky-all [ftse-3m-vals]
   (map #(faky-one % ftse-3m-vals) (get-saved-data-stocks)))
 
+(defn look-for-setups [stock-name]
+  (try
+    (let [day-prices (csv-prices-to-day-map (take-last 250 (load-values-from-csv stock-name)))
+          adx-values (reduce calc-adx [] day-prices)
+          setups (find-setups (dec (count adx-values)) adx-values {} )]
+      (if (:setup setups)
+        (let [week (take-last 5 adx-values)
+              today (last week)
+              yesterday (nth week 3)
+              long (bull-watch (:watch setups))
+              open (if long (:high today) (:low today))]
+          (-> setups
+              (assoc :adx (last adx-values))
+              (assoc :name stock-name)
+              (assoc :week week)
+              (assoc :long long)
+              (assoc :stop (calc-initial-stop long week yesterday today))
+              (assoc :open open)))
+        {}))
+    (catch Exception e
+      (do (println (str "Couldn't calculate " stock-name " " (.getMessage e)))
+          {}))))
+
+(defn todays-setups []
+  (filter #(not (empty? %)) (map look-for-setups (get-saved-data-stocks))))

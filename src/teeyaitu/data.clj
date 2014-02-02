@@ -1,3 +1,4 @@
+
 (ns teeyaitu.data
   (:use teeyaitu.core
         clojure-csv.core))
@@ -64,3 +65,4 @@
                         (clojure.string/join "\n" rows)))))
 
 (defn sort-trades[trades] (sort #(- (:date %1 0) (:date %2 0)) trades))
+

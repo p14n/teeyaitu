@@ -98,11 +98,13 @@
   (let [watchlist-val (on-watchlist day-index stock-adxs ftse-3m-perf)]
     (if (empty? watchlist-val)
       {}
-      (if (recent-2m-high? day-index stock-adxs)
-        {:watch watchlist-val :setup true}
-        {:watch watchlist-val :setup false}))))
+      (let [today (:date (nth stock-adxs day-index))]
+        (if (recent-2m-high? day-index stock-adxs)
+          {:watch watchlist-val :setup true :date today}
+          {:watch watchlist-val :setup false :date today})))))
 
 (defn add-watchlist-and-setups [watchlist stock-name range-of-days stock-adxs ftse-3m-vals]
+  "Add setups to the watchlist for the range of days (a list of indexes of stock-adxs to examine"
   (let [merge-function
         #(let [today (nth stock-adxs %2)
                day-setup (find-setups %2 stock-adxs (ftse-3m-vals (:date today) 100))]
@@ -213,10 +215,13 @@
 
 (defn calc-initial-stop [long last-week-adxs yesterday-adxs today-adxs]
   (if long
-    (min (:low (lowest last-week-adxs))
-         (- (:high yesterday-adxs) (:ATR today-adxs)))
-    (max (:high (highest last-week-adxs))
-         (+ (:low yesterday-adxs) (:ATR today-adxs)))))
+      ;; (- (:close yesterday-adxs) (:ATR today-adxs))
+      ;; (+ (:close yesterday-adxs) (:ATR today-adxs))
+      (min (:low (lowest last-week-adxs))
+           (- (:high yesterday-adxs) (:ATR today-adxs)))
+      (max (:high (highest last-week-adxs))
+           (+ (:low yesterday-adxs) (:ATR today-adxs)))
+      ))
 
 
 (defn open-new-trades [trades watch-and-setup today-adxs yesterday-adxs last-week-adxs stock-name]
