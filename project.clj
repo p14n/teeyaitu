@@ -6,7 +6,7 @@
   :dependencies [
                  [org.clojure/clojure "1.4.0"],
                  [incanter/incanter "1.4.1"]
-                 [enlive "1.1.1"]
+                 [enlive "1.1.5"]
                  [clojure-csv/clojure-csv "2.0.1"]
                  ]
   :java-source-paths ["java/src","java/test"]

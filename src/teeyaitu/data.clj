@@ -1,9 +1,9 @@
-
 (ns teeyaitu.data
   (:use teeyaitu.core
-        clojure-csv.core))
-(require '(net.cgrand [enlive-html :as html]))
+        clojure-csv.core)
+  (:require [net.cgrand.enlive-html :as html]))
 
+(import java.util.Calendar)
 ;;components
 ;;http://uk.finance.yahoo.com/q/cp?s=%5EFTSE&c=0 1 2
 ;;http://uk.finance.yahoo.com/q/cp?s=%5EFTMC&c=0 1 2 3 4 5
@@ -16,10 +16,25 @@
                 (java.io.InputStreamReader. stream))]
       (clojure.string/join "\n" (line-seq buf)))))
 
+(defn create-cal [days-offset]
+  (let [cal (Calendar/getInstance)]
+    (do (.set cal Calendar/DATE days-offset))
+    cal))
+
+
+(defn construct-stock-url [name]
+  (let [from-cal (create-cal -365)
+        to-cal (create-cal 1)]
+    (str "http://ichart.finance.yahoo.com/table.csv?s=" name
+         "&d=" (.get to-cal Calendar/MONTH)
+         "&e=" (.get to-cal Calendar/DATE)
+         "&f"
+         "&d=0&e=23&f=2014&g=d&a=4&b=24&c=1999&ignore=.csv")))
+
 (defn fetch-and-save-prices[stock]
   (try 
     (spit (str "data/" stock ".csv")
-          (fetch-from-url (str "http://ichart.finance.yahoo.com/table.csv?s=" stock "&d=0&e=23&f=2014&g=d&a=4&b=24&c=1999&ignore=.csv")))
+          (fetch-from-url ))
     (catch Exception e (println (str "Couldn't get " stock " " (.getMessage e))))))
 
 (defn html-from-file[x]
