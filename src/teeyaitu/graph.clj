@@ -14,5 +14,5 @@
         dataset (i/to-dataset day-values)]
     (create-chart-from-dataset dataset)))
 
-(defn png-of-last-3-months [stock]
-  (i/save (create-chart stock 90) (str stock ".png")))
+(defn png-of-last-3-months [stock dir]
+  (i/save (create-chart stock 90) (str dir stock ".png")))

@@ -9,6 +9,7 @@
                  [enlive "1.1.5"]
                  [clojure-csv/clojure-csv "2.0.1"]
                  ]
+  :main teeyaitu.main
   :java-source-paths ["java/src","java/test"]
   :profiles {:dev {:dependencies [[midje "1.5.1"]]
                  :plugins [[lein-midje "3.0.0"]]}})

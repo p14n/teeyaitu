@@ -18,7 +18,7 @@
 
 (defn create-cal [days-offset]
   (let [cal (Calendar/getInstance)]
-    (do (.set cal Calendar/DATE days-offset))
+    (do (.add cal Calendar/DATE days-offset))
     cal))
 
 
@@ -28,8 +28,12 @@
     (str "http://ichart.finance.yahoo.com/table.csv?s=" name
          "&d=" (.get to-cal Calendar/MONTH)
          "&e=" (.get to-cal Calendar/DATE)
-         "&f"
-         "&d=0&e=23&f=2014&g=d&a=4&b=24&c=1999&ignore=.csv")))
+         "&f=" (.get to-cal Calendar/YEAR)
+         "&g="
+         "&a=" (.get from-cal Calendar/MONTH)
+         "&b=" (.get from-cal Calendar/DATE)
+         "&c=" (.get from-cal Calendar/YEAR)
+         "&ignore=.csv")))
 
 (defn fetch-and-save-prices[stock]
   (try 
