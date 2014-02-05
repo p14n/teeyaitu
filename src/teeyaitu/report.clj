@@ -35,7 +35,7 @@
 (html/defsnippet chart-and-prices "template.html" [:.content]
   [model]
   [:img] (html/set-attr :src (str (:name model) ".png"))
-  [:.prices] (html/content (price-table (:week model))))
+  [:.prices] (html/substitute (price-table (:week model))))
 
 (html/defsnippet section-model "template.html" *section-sel*
   [model]
@@ -43,7 +43,7 @@
                                (:name model) " at "
                                (:open model) ", stop "
                                (:stop model)))
-  [:.content] (html/content (chart-and-prices model)))
+  [:.content] (html/substitute (chart-and-prices model)))
 
 (html/deftemplate report "template.html"
   [setups]
@@ -53,6 +53,6 @@
 
 (defn save-report [setups name]
   (let [dir (str name "/")]
-    (do (.mkDir (java.io.File. name)))
+    (do (.mkdir (java.io.File. name)))
     (dorun (map #(png-of-last-3-months (:name %) dir) setups))
     (spit (str dir "report.html") (clojure.string/join (report setups)))))

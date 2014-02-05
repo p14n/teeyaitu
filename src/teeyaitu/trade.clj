@@ -4,10 +4,15 @@
                 teeyaitu.adx
         clojure-csv.core))
 
+(defn fetch-and-save-if-absent [stock]
+  (let [file (java.io.File. (str "data/" stock ".csv"))]
+    (if (not (.exists file)) (fetch-and-save-prices stock)
+        (println (str "Ignoring " stock)))))
+
 (defn save-350-to-disk
   ([] (save-350-to-disk 350 (fetch-350-tickers)))
   ([last-x all-tickers]
-   (map fetch-and-save-prices (take-last last-x all-tickers))))
+   (map fetch-and-save-if-absent (take-last last-x all-tickers))))
 
 (defn get-saved-data-stocks []
   (map

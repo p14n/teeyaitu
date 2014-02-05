@@ -1,24 +1,81 @@
 <html>
     <head>
         <title id="title">Setups</title>
-        <link type="text/css" rel="stylesheet" href="template.css"></link>
+        <link href="../src/report.css" rel="stylesheet" type="text/css"/>
+        <script type="text/javascript">function get_nextsibling(n){
+            x=n.nextSibling;
+            while (x.nodeType!=1){
+              x=x.nextSibling;
+            }
+            return x;
+        }
+        function toggleVis(el){
+            target = get_nextsibling(el)
+            disp = target.getAttribute('style')
+            if(disp==='display: none'){
+                target.setAttribute('style','display: block')
+            } else {
+                target.setAttribute('style','display: none')
+            }
+        }</script>
     </head>
     <body>
-
-        <h2 class="title">BARC.L Open <span>100</span> Stop <span>99</span></li></h2>
-        <ul class="content"> 
-            <li><img src="BARC.L.png"></img></li> 
+        <h2 class="title" onClick="toggleVis(this)">BARC.L Open 
+            <span>
+                100</span>Stop 
+            <span>
+                99</span>
+        </h2>
+        <ul class="content" style="display: none">
             <li>
-            <table class="prices">
-                <tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th></tr>
-                <tr><td>20140101</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
-                <tr><td>20140101</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
-                <tr><td>20140101</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
-                <tr><td>20140101</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
-                <tr><td>20140101</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
-            </table>
-            </li> 
+                <img src="../20140204/BOY.L.png"/>
+            </li>
+            <li>
+                <table class="prices">
+                    <tr>
+                        <th>Date</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                    </tr>
+                    <tr>
+                        <td>20140101</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>20140101</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>20140101</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>20140101</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>20140101</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+            </li>
         </ul>
-
     </body>
 </html>

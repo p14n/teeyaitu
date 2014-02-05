@@ -36,9 +36,12 @@
          "&ignore=.csv")))
 
 (defn fetch-and-save-prices[stock]
-  (try 
-    (spit (str "data/" stock ".csv")
-          (fetch-from-url ))
+  (try
+    (let [file (str "data/" stock ".csv")]
+      (do
+        (println (str "Writing file " file))
+        (spit file
+              (fetch-from-url (construct-stock-url stock)))))
     (catch Exception e (println (str "Couldn't get " stock " " (.getMessage e))))))
 
 (defn html-from-file[x]
@@ -84,4 +87,6 @@
                         (clojure.string/join "\n" rows)))))
 
 (defn sort-trades[trades] (sort #(- (:date %1 0) (:date %2 0)) trades))
+
+
 

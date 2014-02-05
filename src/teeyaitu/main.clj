@@ -5,7 +5,7 @@
 (def sdf
   (java.text.SimpleDateFormat. "yyyyMMdd"))
 
-(defn -main [& arg]
+(defn -main [& [arg]]
   (let [dayname (.format sdf (java.util.Date.))]
     (cond (= arg "data")
           (save-350-to-disk)
