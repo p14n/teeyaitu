@@ -1,3 +1,4 @@
+src/ig-credentials
 /target
 /lib
 /classes
@@ -15,3 +16,4 @@ pom.xml.asc
 test/*.xlsx
 *.*#
 .#*.*
+.nrepl-port

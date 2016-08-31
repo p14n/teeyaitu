@@ -7,8 +7,8 @@
 ;;components
 ;;http://uk.finance.yahoo.com/q/cp?s=%5EFTSE&c=0 1 2
 ;;http://uk.finance.yahoo.com/q/cp?s=%5EFTMC&c=0 1 2 3 4 5
-(def ftse100root "http://uk.finance.yahoo.com/q/cp?s=%5EFTSE&c=")
-(def ftse250root "http://uk.finance.yahoo.com/q/cp?s=%5EFTMC&c=")
+(def ftse100root "https://uk.finance.yahoo.com/q/cp?s=%5EFTSE&c=")
+(def ftse250root "https://uk.finance.yahoo.com/q/cp?s=%5EFTMC&c=")
 
 (defn fetch-from-url[address]
   (with-open [stream (.openStream (java.net.URL. address))]
