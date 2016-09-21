@@ -1,1 +1,20 @@
-[{:name "GOLD" :epic "MT.D.GC.MONTH1.IP"}]
+[
+{:name "GOLD" :epic "MT.D.GC.MONTH1.IP"},
+{:name "HSBC" :epic "KA.D.HSBA.DEC.IP"},
+{:name "SmartMetering" :epic "KA.D.SMSLN.DEC.IP"},
+{:name "KennedyWilson" :epic "KA.D.KWELN.DEC.IP"},
+{:name "Lombard" :epic "KC.D.LRM.DEC.IP"},
+{:name "Balfour" :epic "KA.D.BBY.DEC.IP"},
+{:name "TaylorWimpey" :epic "KA.D.TWLN.DEC.IP"},
+{:name "Halma" :epic "KA.D.HLMA.DEC.IP"},
+{:name "WaterIntelligence" :epic "KC.D.WATRLN.DEC.IP"},
+{:name "IdeaGen" :epic "KC.D.IDEALN.DEC.IP"},
+{:name "WorldPay" :epic "KA.D.WPGLN.DEC.IP"},
+{:name "BluePrism" :epic "KC.D.PRSMLN.DEC.IP"},
+{:name "Hikma" :epic "KA.D.HIK.DEC.IP"},
+{:name "Cobham" :epic "KA.D.COB.DEC.IP"},
+{:name "Tharisa" :epic "KC.D.THSLN.DEC.IP"},
+{:name "Brookdale" :epic "SA.D.BKD.DEC.IP"},
+{:name "Whitbread" :epic "KA.D.WTB.DEC.IP"},
+{:name "BitcoinGBP" :epic "CS.D.XBTGBP.TODAY.IP"}
+]

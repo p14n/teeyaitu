@@ -1,8 +1,11 @@
 (ns teeyaitu.ig
-  (:require [clj-http.client :as client]))
+  (:require [clj-http.client :as client]
+            [clj-time.format :as f]
+            [clj-time.core :as time]))
 
 (def credentials (load-file "src/ig-credentials"))
 (def ig-list (load-file "src/ig-list"))
+(def default-env :demo)
 
 ;Request
 
@@ -100,8 +103,8 @@
   (login (LoginRequest. username password apikey environment)))
 
 (def authenticateme
-  (let [{username :user password :password key :key} credentials]
-    #(authenticate username password key :live)))
+  (let [{username :user password :password key :key} (credentials default-env)]
+    #(authenticate username password key default-env)))
 
 (defn get-positions [context]
   (get-generator context "/positions" 2))
@@ -160,12 +163,45 @@
         content (apply str lines)]
     content))
 
-(def read-ig
-  (fn []
-    (let [{ctx :context} (authenticateme)
-          markets (map #(do {:name (:name %) :prices (get-in (get-day-prices ctx (:epic %) 5) [:content :prices])}) ig-list)]
-      markets)))
+(def fmt (f/formatter "yyyyMMdd"))
+(def igfmt (f/formatter "yyyy/MM/dd"))
+
+(defn assure-file-exists [name]
+  (let [filename (str "data/" name ".csv")]
+    (if (not (.exists (clojure.java.io/as-file filename)))
+      (spit filename "Date,Open,High,Low\n"))
+    filename))
+
+(defn last-date-in-file [filename]
+  (let [lastline (last (.split (slurp filename) "\n"))]
+    (if (= \2 (first lastline))
+      (f/parse fmt (.substring lastline 0 8))
+      nil)))
+
+(defn days-since-last-recorded [lastdate]
+  (if (nil? lastdate) 310 (time/in-days (time/interval lastdate (time/now)))))
+
+(defn read-ig-epic [ctx name epic days]
+  (do (println (str "Reading " name))
+    {:name name :prices (get-in (get-day-prices ctx epic days) [:content :prices])}))
+
+(defn read-ig-gold [ctx]
+  (read-ig-epic ctx "GOLD" "MT.D.GC.MONTH1.IP" 1))
+
+(defn filter-prices-by-date [date prices]
+  (let [datestring (f/unparse igfmt date)
+        filterf #(not (.startsWith (:snapshotTime %) datestring))]
+    (drop 1 (drop-while filterf prices))))
+
+(defn read-and-save [ctx instrument]
+  (let [name (:name instrument)
+        filename (assure-file-exists name)
+        lastdate (last-date-in-file filename)
+        days (days-since-last-recorded lastdate)
+        market (read-ig-epic ctx name (:epic instrument) days)]
+    (spit filename (format-prices (filter-prices-by-date lastdate (:prices market))) :append true)
+    market))
 
 (defn save-ig-to-disk []
-  (let [markets (read-ig)]
-    (map #(spit (str "data/" (:name %) ".csv") (str "Date,Open,High,Low\n" (format-prices (:prices %)))) markets)))
+  (let [{ctx :context} (authenticateme)]
+    (map #(read-and-save ctx %) ig-list)))
