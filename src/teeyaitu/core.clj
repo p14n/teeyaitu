@@ -152,17 +152,6 @@
     (assoc trade :stop (:open trade))
     trade))
 
-
-(defn apply-stops [trade today]
-  (-> trade
-      ;(trailing-stop today)
-      ;(timeout-trade today)
-      (move-break-even)
-      ;(protect-profits)
-      (take-profits today)
-      ))
-
-
 (defn trailing-stop [trade today]
   (if (:long trade)
     (assoc trade :stop (max (:stop trade)
@@ -170,6 +159,14 @@
     (assoc trade :stop (min (:stop trade)
                             (+ (:low today) (* 3M (:risk trade)))))))
 
+(defn apply-stops [trade today]
+  (-> trade
+      (trailing-stop today)
+      (timeout-trade today)
+      (move-break-even)
+      ;(protect-profits)
+      (take-profits today)
+      ))
 
 (defn close-stopped-trade [today opentrade]
   (if (:closed opentrade) opentrade

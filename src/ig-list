@@ -16,5 +16,25 @@
 {:name "Tharisa" :epic "KC.D.THSLN.DEC.IP"},
 {:name "Brookdale" :epic "SA.D.BKD.DEC.IP"},
 {:name "Whitbread" :epic "KA.D.WTB.DEC.IP"},
-{:name "BitcoinGBP" :epic "CS.D.XBTGBP.TODAY.IP"}
+{:name "BitcoinGBP" :epic "CS.D.XBTGBP.TODAY.IP"},
+{:name "Morrisons" :epic "KA.D.MRW.DEC.IP"},
+{:name "JohnsonMatthey" :epic "KA.D.JMAT.DEC.IP"},
+{:name "AGBarr" :epic "KA.D.BAG.DEC.IP"},
+{:name "StandardCharter" :epic "KA.D.STAN.DEC.IP"},
+{:name "Lloyds" :epic "KA.D.LLOY.DEC.IP"},
+{:name "Renishaw" :epic "KA.D.RSW.DEC.IP"},
+{:name "LegalAndGeneral" :epic "KA.D.LGEN.DEC.IP"},
+{:name "Petrofac" :epic "KA.D.PFC.DEC.IP"},
+{:name "PolarTech" :epic "KA.D.PCT.DEC.IP"},
+{:name "Blackrock" :epic "KA.D.BRWM.DEC.IP"},
+{:name "isharesWorldGBP" :epic "KA.D.IGWDLN.DEC.IP"},
+{:name "BerkshireHathaway" :epic "SA.D.BRKB.DEC.IP"},
+{:name "BritishEmpire" :epic "KA.D.BTEM.DEC.IP"},
+{:name "CapitalGearing" :epic "KA.D.CGT.DEC.IP"},
+{:name "Ruffer" :epic "KA.D.RICA.DEC.IP"},
+{:name "StandardLifePrivateEquity" :epic "KA.D.SEPLN.DEC.IP"},
+{:name "iSharesTaiwan" :epic "SI.D.EWT.DEC.IP"},
+{:name "iSharesMexico" :epic "SI.D.EWWUS.DEC.IP"}
 ]
+
+

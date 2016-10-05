@@ -68,10 +68,12 @@
 (defn save-stock-prices [stocks]
   (pmap fetch-and-save-prices stocks))
 
+(defn remove-blank-vals [prices]
+  (filter #(not (= "000" (nth % 5))) prices))
+
 (defn load-values-from-csv [stock]
-  (filter #(not (= "000" (nth % 5)))
-          (reverse (rest (parse-csv (clojure.string/replace
-                                     (slurp (str "data/" stock ".csv")) "-" ""))))))
+  (remove-blank-vals (do (rest (parse-csv (clojure.string/replace
+                                                 (slurp (str "data/" stock ".csv")) "-" ""))))))
 
 (defn csv-prices-to-day-map [csv-prices] (map #(-> {:date (Integer/parseInt (first %))
                                           :high (to-bigdec (nth % 2))

@@ -149,7 +149,11 @@
 
 
 (defn mid-price [price]
-  (/ (+ (:bid price) (:ask price)) 2))
+  (let [bid (:bid price)
+        ask (:ask price)]
+    (cond (nil? bid) ask
+          (nil? ask) bid
+          :else (/ (+ (:bid price) (:ask price)) 2))))
 
 (defn format-prices [prices]
   (let [lines (map
@@ -157,7 +161,8 @@
                   (.substring (clojure.string/replace (:snapshotTime %) "/" "") 0 8) ","
                   (mid-price (:openPrice %)) ","
                   (mid-price (:highPrice %)) ","
-                  (mid-price (:lowPrice %)) "\n"
+                  (mid-price (:lowPrice %)) ","
+                  (mid-price (:closePrice %)) ",1,\n"
                   )
                 prices)
         content (apply str lines)]
@@ -189,9 +194,11 @@
   (read-ig-epic ctx "GOLD" "MT.D.GC.MONTH1.IP" 1))
 
 (defn filter-prices-by-date [date prices]
-  (let [datestring (f/unparse igfmt date)
-        filterf #(not (.startsWith (:snapshotTime %) datestring))]
-    (drop 1 (drop-while filterf prices))))
+  (if (nil? date)
+    prices
+    (let [datestring (f/unparse igfmt date)
+          filterf #(not (.startsWith (:snapshotTime %) datestring))]
+      (drop 1 (drop-while filterf prices)))))
 
 (defn read-and-save [ctx instrument]
   (let [name (:name instrument)
@@ -201,6 +208,12 @@
         market (read-ig-epic ctx name (:epic instrument) days)]
     (spit filename (format-prices (filter-prices-by-date lastdate (:prices market))) :append true)
     market))
+
+(defn save-result [{name :name prices :prices}]
+  (let [filename (assure-file-exists name)
+        lastdate (last-date-in-file filename)]
+    (spit filename (format-prices (filter-prices-by-date lastdate prices)) :append true)
+    prices))
 
 (defn save-ig-to-disk []
   (let [{ctx :context} (authenticateme)]
