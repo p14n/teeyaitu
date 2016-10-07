@@ -20,6 +20,7 @@
    (seq (.listFiles (java.io.File. "data/")))))
 
 (defn faky-one [stock ftse-3m-vals]
+  (println (str "Backtest " stock))
   (let [day-prices (csv-prices-to-day-map (load-values-from-csv stock))
         adx-values (reduce calc-adx [] day-prices)]
     (try (faky-trady stock adx-values ftse-3m-vals)

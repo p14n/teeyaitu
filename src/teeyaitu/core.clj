@@ -162,7 +162,7 @@
 (defn apply-stops [trade today]
   (-> trade
       (trailing-stop today)
-      (timeout-trade today)
+      ;(timeout-trade today)
       (move-break-even)
       ;(protect-profits)
       (take-profits today)

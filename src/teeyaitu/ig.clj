@@ -183,8 +183,13 @@
       (f/parse fmt (.substring lastline 0 8))
       nil)))
 
+(defn correct-day [n] (if (< (time/hour n) 17) (time/minus n (time/days 1)) n))
+
+(defn now-bst []
+  (time/to-time-zone (time/now) (time/time-zone-for-id "Europe/London")))
+
 (defn days-since-last-recorded [lastdate]
-  (if (nil? lastdate) 310 (time/in-days (time/interval lastdate (time/now)))))
+  (if (nil? lastdate) 310 (time/in-days (time/interval lastdate (correct-day (now-bst))))))
 
 (defn read-ig-epic [ctx name epic days]
   (do (println (str "Reading " name))

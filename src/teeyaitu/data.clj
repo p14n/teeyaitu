@@ -69,7 +69,7 @@
   (pmap fetch-and-save-prices stocks))
 
 (defn remove-blank-vals [prices]
-  (filter #(not (= "000" (nth % 5))) prices))
+  (filter #(or (> 6 (count %)) (not (= "000" (nth % 5)))) prices))
 
 (defn load-values-from-csv [stock]
   (remove-blank-vals (do (rest (parse-csv (clojure.string/replace
