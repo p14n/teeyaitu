@@ -1,0 +1,109 @@
+{:index "FTSE 100"
+ :as-of "2025-12-07"
+ :source "topforeignstocks.com list citing LSE, retrieved 2026-10-23"
+ ;; Today's constituents projected back to the start of history: NOT point-in-time.
+ ;; Replace with a paid point-in-time membership file before trusting any result.
+ :point-in-time? false
+ :members
+ [
+  {:ticker "III"    :name "3i Group" :from nil :to nil}
+  {:ticker "ADM"    :name "Admiral Group" :from nil :to nil}
+  {:ticker "AAF"    :name "Airtel Africa" :from nil :to nil}
+  {:ticker "ALW"    :name "Alliance Witan" :from nil :to nil}
+  {:ticker "AAL"    :name "Anglo American" :from nil :to nil}
+  {:ticker "ANTO"   :name "Antofagasta" :from nil :to nil}
+  {:ticker "AHT"    :name "Ashtead Group" :from nil :to nil}
+  {:ticker "ABF"    :name "Associated British Foods" :from nil :to nil}
+  {:ticker "AZN"    :name "AstraZeneca" :from nil :to nil}
+  {:ticker "AUTO"   :name "Auto Trader Group" :from nil :to nil}
+  {:ticker "AV"     :name "Aviva" :from nil :to nil}
+  {:ticker "BA"     :name "BAE Systems" :from nil :to nil}
+  {:ticker "BARC"   :name "Barclays" :from nil :to nil}
+  {:ticker "BTRW"   :name "Barratt Redrow" :from nil :to nil}
+  {:ticker "BEZ"    :name "Beazley" :from nil :to nil}
+  {:ticker "BKG"    :name "Berkeley Group Holdings" :from nil :to nil}
+  {:ticker "BP"     :name "BP" :from nil :to nil}
+  {:ticker "BATS"   :name "British American Tobacco" :from nil :to nil}
+  {:ticker "BLND"   :name "British Land" :from nil :to nil}
+  {:ticker "BT.A"   :name "BT Group" :from nil :to nil}
+  {:ticker "BNZL"   :name "Bunzl" :from nil :to nil}
+  {:ticker "CNA"    :name "Centrica" :from nil :to nil}
+  {:ticker "CCH"    :name "Coca-Cola HBC" :from nil :to nil}
+  {:ticker "CPG"    :name "Compass Group" :from nil :to nil}
+  {:ticker "CTEC"   :name "Convatec Group" :from nil :to nil}
+  {:ticker "CRDA"   :name "Croda International" :from nil :to nil}
+  {:ticker "DCC"    :name "DCC" :from nil :to nil}
+  {:ticker "DGE"    :name "Diageo" :from nil :to nil}
+  {:ticker "DPLM"   :name "Diploma" :from nil :to nil}
+  {:ticker "EZJ"    :name "easyJet" :from nil :to nil}
+  {:ticker "EDV"    :name "Endeavour Mining" :from nil :to nil}
+  {:ticker "ENT"    :name "Entain" :from nil :to nil}
+  {:ticker "EXPN"   :name "Experian" :from nil :to nil}
+  {:ticker "FCIT"   :name "F&C Investment Trust" :from nil :to nil}
+  {:ticker "FRES"   :name "Fresnillo" :from nil :to nil}
+  {:ticker "GAW"    :name "Games Workshop Group" :from nil :to nil}
+  {:ticker "GLEN"   :name "Glencore" :from nil :to nil}
+  {:ticker "GSK"    :name "GSK" :from nil :to nil}
+  {:ticker "HLN"    :name "Haleon" :from nil :to nil}
+  {:ticker "HLMA"   :name "Halma" :from nil :to nil}
+  {:ticker "HL"     :name "Hargreaves Lansdown" :from nil :to nil}
+  {:ticker "HIK"    :name "Hikma Pharmaceuticals" :from nil :to nil}
+  {:ticker "HSX"    :name "Hiscox" :from nil :to nil}
+  {:ticker "HWDN"   :name "Howden Joinery Group" :from nil :to nil}
+  {:ticker "HSBA"   :name "HSBC Holdings" :from nil :to nil}
+  {:ticker "IMI"    :name "IMI" :from nil :to nil}
+  {:ticker "IMB"    :name "Imperial Brands" :from nil :to nil}
+  {:ticker "INF"    :name "Informa" :from nil :to nil}
+  {:ticker "IHG"    :name "InterContinental Hotels Group" :from nil :to nil}
+  {:ticker "ICG"    :name "Intermediate Capital Group" :from nil :to nil}
+  {:ticker "ITRK"   :name "Intertek Group" :from nil :to nil}
+  {:ticker "IAG"    :name "International Consolidated Airlines Group" :from nil :to nil}
+  {:ticker "JD"     :name "JD Sports Fashion" :from nil :to nil}
+  {:ticker "KGF"    :name "Kingfisher" :from nil :to nil}
+  {:ticker "LAND"   :name "Land Securities Group" :from nil :to nil}
+  {:ticker "LGEN"   :name "Legal & General Group" :from nil :to nil}
+  {:ticker "LLOY"   :name "Lloyds Banking Group" :from nil :to nil}
+  {:ticker "LSEG"   :name "London Stock Exchange Group" :from nil :to nil}
+  {:ticker "LMP"    :name "LondonMetric Property" :from nil :to nil}
+  {:ticker "MNG"    :name "M&G" :from nil :to nil}
+  {:ticker "MKS"    :name "Marks & Spencer Group" :from nil :to nil}
+  {:ticker "MRO"    :name "Melrose Industries" :from nil :to nil}
+  {:ticker "MNDI"   :name "Mondi" :from nil :to nil}
+  {:ticker "NG"     :name "National Grid" :from nil :to nil}
+  {:ticker "NWG"    :name "NatWest Group" :from nil :to nil}
+  {:ticker "NXT"    :name "Next" :from nil :to nil}
+  {:ticker "PSON"   :name "Pearson" :from nil :to nil}
+  {:ticker "PSH"    :name "Pershing Square Holdings" :from nil :to nil}
+  {:ticker "PSN"    :name "Persimmon" :from nil :to nil}
+  {:ticker "PHNX"   :name "Phoenix Group Holdings" :from nil :to nil}
+  {:ticker "PRU"    :name "Prudential" :from nil :to nil}
+  {:ticker "RKT"    :name "Reckitt Benckiser Group" :from nil :to nil}
+  {:ticker "REL"    :name "RELX" :from nil :to nil}
+  {:ticker "RTO"    :name "Rentokil Initial" :from nil :to nil}
+  {:ticker "RMV"    :name "Rightmove" :from nil :to nil}
+  {:ticker "RIO"    :name "Rio Tinto" :from nil :to nil}
+  {:ticker "RR"     :name "Rolls-Royce Holdings" :from nil :to nil}
+  {:ticker "SGE"    :name "Sage Group" :from nil :to nil}
+  {:ticker "SBRY"   :name "J Sainsbury" :from nil :to nil}
+  {:ticker "SDR"    :name "Schroders" :from nil :to nil}
+  {:ticker "SMT"    :name "Scottish Mortgage Investment Trust" :from nil :to nil}
+  {:ticker "SGRO"   :name "Segro" :from nil :to nil}
+  {:ticker "SVT"    :name "Severn Trent" :from nil :to nil}
+  {:ticker "SHEL"   :name "Shell" :from nil :to nil}
+  {:ticker "SN"     :name "Smith & Nephew" :from nil :to nil}
+  {:ticker "SMDS"   :name "DS Smith" :from nil :to nil}
+  {:ticker "SMIN"   :name "Smiths Group" :from nil :to nil}
+  {:ticker "SPX"    :name "Spirax Group" :from nil :to nil}
+  {:ticker "SSE"    :name "SSE" :from nil :to nil}
+  {:ticker "STJ"    :name "St. James's Place" :from nil :to nil}
+  {:ticker "STAN"   :name "Standard Chartered" :from nil :to nil}
+  {:ticker "TW"     :name "Taylor Wimpey" :from nil :to nil}
+  {:ticker "TSCO"   :name "Tesco" :from nil :to nil}
+  {:ticker "ULVR"   :name "Unilever" :from nil :to nil}
+  {:ticker "UTG"    :name "Unite Group" :from nil :to nil}
+  {:ticker "UU"     :name "United Utilities Group" :from nil :to nil}
+  {:ticker "VOD"    :name "Vodafone Group" :from nil :to nil}
+  {:ticker "WEIR"   :name "Weir Group" :from nil :to nil}
+  {:ticker "WTB"    :name "Whitbread" :from nil :to nil}
+  {:ticker "WPP"    :name "WPP" :from nil :to nil}
+ ]}

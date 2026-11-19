@@ -1,0 +1,32 @@
+;; Default configuration. Environment variables override selected keys
+;; (see com.p14n.teeyaitu.config.core/env-overrides). Never put credentials here:
+;; IG credentials are read from AWS Secrets Manager via :ig :secret-arn.
+{:data      {:root   "data"          ; local root mirroring the S3 layout
+             :bucket nil}            ; S3 bucket, set in production
+
+ :ig        {:env           :demo
+             :secret-arn    nil
+             :min-allowance 500
+             :gateways      {:demo "https://demo-api.ig.com/gateway/deal"
+                             :live "https://api.ig.com/gateway/deal"}}
+
+ :yahoo     {:min-interval-ms 1000
+             :cache-dir       ".cache/yahoo"}
+
+ :features  {:vol-window  60
+             :high-window 252}
+
+ ;; Spread-bet cost model. :funding-fee should be confirmed against IG's current rate.
+ :costs     {:spread-bps   10
+             :slippage-bps 5
+             :funding-fee  0.025
+             :borrow-rate  0.005}
+
+ :portfolio {:quantile   0.2          ; top quintile
+             :weighting  :inverse-vol
+             :target-vol 0.15
+             :max-weight 0.10
+             :max-gross  1.0
+             :horizon    1}           ; 3 => three staggered sleeves
+
+ :gate      {:max-drawdown-multiple 1.25}}
