@@ -1,0 +1,19 @@
+{:aliases {:dev {:extra-paths ["development/src"]
+                 :extra-deps {org.clojure/clojure {:mvn/version "1.12.0"}
+                              poly/config {:local/root "components/config"}
+                              poly/yahoo-client {:local/root "components/yahoo-client"}
+                              poly/price-store {:local/root "components/price-store"}
+                              poly/universe {:local/root "components/universe"}
+                              poly/panel {:local/root "components/panel"}
+                              poly/features {:local/root "components/features"}
+                              poly/costs {:local/root "components/costs"}
+                              poly/backtest {:local/root "components/backtest"}
+                              }}
+
+           :test {:extra-paths ["components/config/test" "components/yahoo-client/test" "components/price-store/test" "components/universe/test" "components/panel/test" "components/features/test" "components/costs/test" "components/backtest/test" ]}
+
+           ;; Research notebooks (Clay). Check the Noj version on Clojars before first use.
+           :notebook {:extra-deps {org.scicloj/noj {:mvn/version "2-beta18"}}}
+
+           :poly {:main-opts ["-m" "polylith.clj.core.poly-cli.core"]
+                  :extra-deps {polylith/clj-poly {:mvn/version "0.2.22"}}}}}

@@ -1,0 +1,6 @@
+{:paths ["src" "resources"]
+ :deps {scicloj/tablecloth {:mvn/version "7.029.2"}
+        hato/hato {:mvn/version "1.0.0"}
+        metosin/jsonista {:mvn/version "0.3.8"}}
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps {}}}}
