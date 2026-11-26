@@ -110,11 +110,11 @@
   split; an empty splits sequence yields an empty dataset."
   [panel splits {:keys [feature-cols target xgb-opts] :as opts}]
   (check-opts! opts)
-  (let [rows (mapcat #(tc/rows % :as-maps)
-                     (mapv (fn [split]
-                             (let [fitted (train panel split opts)]
-                               (predict panel split fitted opts)))
-                           splits))]
-    (if (empty? rows)
+  (let [pred-rows (mapcat #(tc/rows % :as-maps)
+                          (mapv (fn [split]
+                                  (let [fitted (train panel split opts)]
+                                    (predict panel split fitted opts)))
+                                splits))]
+    (if (empty? pred-rows)
       (ds/->dataset {:month [] :ticker [] :prediction [] (:target opts) []})
-      (tc/order-by (ds/->dataset rows) [:month :ticker]))))
+      (tc/order-by (ds/->dataset pred-rows) [:month :ticker]))))
