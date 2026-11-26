@@ -98,6 +98,16 @@
                           (model/walk-forward (months 24) (assoc small :test-months 0))))
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"step"
                           (model/walk-forward (months 24) (assoc small :step-months -1)))))
+  (testing "non-integer and nil opts are rejected cleanly, not truncated"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"positive integer"
+                          (model/walk-forward (months 24) (assoc small :train-months 12.5))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"positive integer"
+                          (model/walk-forward (months 24) (assoc small :test-months 3.5))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"positive integer"
+                          (model/walk-forward (months 24) (assoc small :label-horizon nil))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"purge"
+                          (model/walk-forward (months 24)
+                                              (assoc small :purge-months nil)))))
   (testing "duplicate months are rejected"
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"duplicate"
                           (model/walk-forward (concat (months 18) [(first (months 1))]) small))))

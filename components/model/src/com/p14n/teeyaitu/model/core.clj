@@ -19,13 +19,15 @@
 (defn- validate-opts!
   [opts]
   (doseq [k [:train-months :test-months :step-months :label-horizon]]
-    (check! (pos? (get opts k)) k
-            (str "walk-forward: " (name k) " must be positive, got " (get opts k)) opts))
-  (check! (>= (:purge-months opts) (:label-horizon opts)) :purge-months
-          (str "walk-forward: :purge-months " (:purge-months opts)
-               " is narrower than :label-horizon " (:label-horizon opts)
+    (check! (and (integer? (get opts k)) (pos? (get opts k))) k
+            (str "walk-forward: " (name k) " must be a positive integer, got "
+                 (pr-str (get opts k))) opts))
+  (check! (and (integer? (:purge-months opts)) (>= (:purge-months opts) (:label-horizon opts))) :purge-months
+          (str "walk-forward: :purge-months " (pr-str (:purge-months opts))
+               " must be an integer at least as wide as :label-horizon "
+               (:label-horizon opts)
                ", so forward-return labels would leak from train into test")
-          opts)
+           opts)
   opts)
 
 (defn- validate-months!
