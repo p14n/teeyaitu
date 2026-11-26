@@ -1,4 +1,12 @@
 {:paths ["src"]
- :deps {}
+ :deps {scicloj/tablecloth {:mvn/version "7.029.2"}
+        org.scicloj/scicloj.ml.xgboost {:mvn/version "6.5.1"
+                                        ;; Keep the log4j/slf4j stack clean, as price-store does.
+                                        :exclusions [org.slf4j/slf4j-log4j12 log4j/log4j
+                                                     com.sun.jersey/jersey-core com.sun.jersey/jersey-server
+                                                     com.sun.jersey/jersey-json com.sun.jersey/jersey-servlet
+                                                     javax.servlet/servlet-api org.eclipse.jetty/jetty-server
+                                                     org.eclipse.jetty/jetty-util org.eclipse.jetty/jetty-servlet
+                                                     org.eclipse.jetty/jetty-webapp]}}
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps {}}}}
