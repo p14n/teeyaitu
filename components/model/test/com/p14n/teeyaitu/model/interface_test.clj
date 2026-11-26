@@ -119,8 +119,8 @@
 
 (defn synthetic-panel
   "n-months x n-tickers synthetic feature panel. :f1/:f2 vary with ticker and
-  (periodically) with month; :fwd-ret-1m is a deterministic function of them, so
-  it is learnable without extrapolating a time trend."
+  (periodically) with month; :fwd-ret-1m and :fwd-ret-3m are deterministic
+  functions of them, so both are learnable without extrapolating a time trend."
   [n-months n-tickers]
   (vec
    (for [i (range n-months), t (range n-tickers)
@@ -131,7 +131,8 @@
       :ticker (keyword (str "t" t))
       :f1 f1
       :f2 f2
-      :fwd-ret-1m (- f1 (* 0.5 f2))})))
+      :fwd-ret-1m (- f1 (* 0.5 f2))
+      :fwd-ret-3m (- f1 (* 0.25 f2))})))
 
 (def train-opts
   {:feature-cols [:f1 :f2]
@@ -175,6 +176,18 @@
                                (ds/rows preds :as-maps))
                     (ds/row-count preds))]
       (is (< mae 0.05) (str "MAE too high: " mae)))))
+
+(deftest xgboost-3m-target
+  (testing "the 3-month forward return works as target, keeping its own column"
+    (let [panel  (synthetic-panel 30 5)
+          months (sort (distinct (map :month panel)))
+          splits (model/walk-forward months {:train-months 12 :test-months 6 :purge-months 3 :label-horizon 3})
+          preds  (model/run-walk-forward panel splits
+                                       (assoc train-opts :target :fwd-ret-3m))]
+      (is (= [:month :ticker :prediction :fwd-ret-3m] (vec (ds/column-names preds))))
+      (is (true? (every? #(and (double? %) (Double/isFinite ^double %))
+                         (ds/column preds :prediction))))
+      (is (< 1 (count (distinct (ds/column preds :prediction))))))))
 
 (deftest xgboost-degenerate-inputs
   (let [panel  (synthetic-panel 30 5)
