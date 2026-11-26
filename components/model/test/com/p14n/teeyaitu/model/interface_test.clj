@@ -1,6 +1,7 @@
 (ns com.p14n.teeyaitu.model.interface-test
   (:require [clojure.test :refer [deftest is testing]]
-            [com.p14n.teeyaitu.model.interface :as model])
+            [com.p14n.teeyaitu.model.interface :as model]
+            [tech.v3.dataset :as ds])
   (:import (java.time YearMonth)))
 
 (defn dist
@@ -116,8 +117,6 @@
 
 ;; --- XGBoost training pipeline -------------------------------------------------------
 
-(require '[tech.v3.dataset :as ds])
-
 (defn synthetic-panel
   "n-months x n-tickers synthetic feature panel. :f1/:f2 vary with ticker and
   (periodically) with month; :fwd-ret-1m is a deterministic function of them, so
@@ -150,7 +149,7 @@
       (is (= [:month :ticker :prediction :fwd-ret-1m] (vec (ds/column-names preds))))
       (is (pos? (ds/row-count preds)))
       (is (true? (every? #(instance? YearMonth %) (ds/column preds :month))))
-      (is (true? (every? #(instance? String (name %)) (ds/column preds :ticker)))))
+      (is (true? (every? keyword? (ds/column preds :ticker)))))
     (testing "predictions are finite numbers, not one constant"
       (is (true? (every? #(and (double? %) (Double/isFinite ^double %))
                          (ds/column preds :prediction))))
