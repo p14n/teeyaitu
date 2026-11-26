@@ -8,9 +8,10 @@
                               poly/features {:local/root "components/features"}
                               poly/costs {:local/root "components/costs"}
                               poly/backtest {:local/root "components/backtest"}
+                              poly/model {:local/root "components/model"}
                               }}
 
-           :test {:extra-paths ["components/config/test" "components/yahoo-client/test" "components/price-store/test" "components/universe/test" "components/panel/test" "components/features/test" "components/costs/test" "components/backtest/test" ]}
+           :test {:extra-paths ["components/config/test" "components/yahoo-client/test" "components/price-store/test" "components/universe/test" "components/panel/test" "components/features/test" "components/costs/test" "components/backtest/test" "components/model/test" ]}
 
            ;; Research notebooks (Clay). Check the Noj version on Clojars before first use.
            :notebook {:extra-deps {org.scicloj/noj {:mvn/version "2-beta18"}}}
